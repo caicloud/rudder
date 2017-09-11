@@ -127,6 +127,8 @@ func (e *Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]
 type renderable struct {
 	// tpl is the current template.
 	tpl string
+	// path is the path of chart
+	path string
 	// vals are the values to be supplied to the template.
 	vals chartutil.Values
 	// namespace prefix to the templates of the current chart
@@ -239,7 +241,8 @@ func (e *Engine) render(tpls map[string]renderable) (map[string]string, error) {
 			continue
 		}
 		// At render time, add information about the template that is being rendered.
-		vals := tpls[file].vals
+		tpl := tpls[file]
+		vals := tpl.vals
 		vals["Template"] = map[string]interface{}{"Name": file, "BasePath": tpls[file].basePath}
 		if err := t.ExecuteTemplate(&buf, file, vals); err != nil {
 			return map[string]string{}, fmt.Errorf("render error in %q: %s", file, err)
@@ -248,7 +251,9 @@ func (e *Engine) render(tpls map[string]renderable) (map[string]string, error) {
 		// Work around the issue where Go will emit "<no value>" even if Options(missing=zero)
 		// is set. Since missing=error will never get here, we do not need to handle
 		// the Strict case.
-		rendered[file] = strings.Replace(buf.String(), "<no value>", "", -1)
+		data := strings.Replace(buf.String(), "<no value>", "", -1)
+		data = pollute(data, &tpl)
+		rendered[file] = data
 		buf.Reset()
 	}
 
@@ -284,7 +289,7 @@ func (p byPathLen) Less(i, j int) bool {
 // As it goes, it also prepares the values in a scope-sensitive manner.
 func allTemplates(c *chart.Chart, vals chartutil.Values) map[string]renderable {
 	templates := map[string]renderable{}
-	recAllTpls(c, templates, vals, true, "")
+	recAllTpls(c, templates, vals, true, "", "")
 	return templates
 }
 
@@ -292,7 +297,7 @@ func allTemplates(c *chart.Chart, vals chartutil.Values) map[string]renderable {
 //
 // As it recurses, it also sets the values to be appropriate for the template
 // scope.
-func recAllTpls(c *chart.Chart, templates map[string]renderable, parentVals chartutil.Values, top bool, parentID string) {
+func recAllTpls(c *chart.Chart, templates map[string]renderable, parentVals chartutil.Values, top bool, parentPath string, parentID string) {
 	// This should never evaluate to a nil map. That will cause problems when
 	// values are appended later.
 	cvals := chartutil.Values{}
@@ -320,6 +325,7 @@ func recAllTpls(c *chart.Chart, templates map[string]renderable, parentVals char
 	}
 
 	newParentID := c.Metadata.Name
+	parentPath = path.Join(parentPath, newParentID)
 	if parentID != "" {
 		// We artificially reconstruct the chart path to child templates. This
 		// creates a namespaced filename that can be used to track down the source
@@ -328,11 +334,12 @@ func recAllTpls(c *chart.Chart, templates map[string]renderable, parentVals char
 	}
 
 	for _, child := range c.Dependencies {
-		recAllTpls(child, templates, cvals, false, newParentID)
+		recAllTpls(child, templates, cvals, false, parentPath, newParentID)
 	}
 	for _, t := range c.Templates {
 		templates[path.Join(newParentID, t.Name)] = renderable{
 			tpl:      string(t.Data),
+			path:     parentPath,
 			vals:     cvals,
 			basePath: path.Join(newParentID, "templates"),
 		}

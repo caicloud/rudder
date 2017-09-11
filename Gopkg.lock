@@ -47,7 +47,7 @@
   branch = "master"
   name = "github.com/caicloud/clientset"
   packages = ["informers","informers/config","informers/config/v1alpha1","informers/release","informers/release/v1alpha1","kubernetes","kubernetes/scheme","kubernetes/typed/config/v1alpha1","kubernetes/typed/release/v1alpha1","listers/config/v1alpha1","listers/release/v1alpha1","pkg/apis/config/v1alpha1","pkg/apis/release/v1alpha1"]
-  revision = "7adf4cbacee67173305e5febd0ed7c1cb59fb173"
+  revision = "0b824aa1ad4205a7bc20a6261ea8996d0f286572"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -284,14 +284,15 @@
   version = "v4.0.0"
 
 [[projects]]
+  branch = "release-2.5"
   name = "k8s.io/helm"
   packages = ["pkg/chartutil","pkg/engine","pkg/hooks","pkg/ignore","pkg/proto/hapi/chart","pkg/proto/hapi/release","pkg/proto/hapi/version","pkg/releaseutil","pkg/timeconv"]
-  revision = "bbc1f71dc03afc5f00c6ac84b9308f8ecb4f39ac"
-  version = "v2.6.1"
+  revision = "f2f036e047ad37b38f9f851341b14dcb4941d606"
+  source = "github.com/caicloud/helm"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f52d307ef84cb5c2c8d258eb933c39b70958b7ac277cd9e34bb5255004faeb05"
+  inputs-digest = "f2a9796f82f6a27947326f0b04b439800caf6405cf5ccd5089f53f40dc854be5"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -416,7 +416,7 @@ func TestAlterFuncMap(t *testing.T) {
 	c := &chart.Chart{
 		Metadata: &chart.Metadata{Name: "conrad"},
 		Templates: []*chart.Template{
-			{Name: "templates/quote", Data: []byte(`{{include "conrad/templates/_partial" . | indent 2}} dead.`)},
+			{Name: "templates/quote", Data: []byte("test\n{{include \"conrad/templates/_partial\" . | indent 2}} dead.")},
 			{Name: "templates/_partial", Data: []byte(`{{.Release.Name}} - he`)},
 		},
 		Values:       &chart.Config{Raw: ``},
@@ -436,7 +436,7 @@ func TestAlterFuncMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expect := "  Mistah Kurtz - he dead."
+	expect := "test\n  Mistah Kurtz - he dead."
 	if got := out["conrad/templates/quote"]; got != expect {
 		t.Errorf("Expected %q, got %q (%v)", expect, got, out)
 	}

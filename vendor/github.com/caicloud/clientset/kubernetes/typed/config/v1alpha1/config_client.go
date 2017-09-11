@@ -14,6 +14,7 @@ import (
 type ConfigV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ConfigClaimsGetter
+	ConfigReferencesGetter
 }
 
 // ConfigV1alpha1Client is used to interact with features provided by the config group.
@@ -23,6 +24,10 @@ type ConfigV1alpha1Client struct {
 
 func (c *ConfigV1alpha1Client) ConfigClaims(namespace string) ConfigClaimInterface {
 	return newConfigClaims(c, namespace)
+}
+
+func (c *ConfigV1alpha1Client) ConfigReferences(namespace string) ConfigReferenceInterface {
+	return newConfigReferences(c, namespace)
 }
 
 // NewForConfig creates a new ConfigV1alpha1Client for the given config.
