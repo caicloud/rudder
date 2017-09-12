@@ -14,6 +14,8 @@ import (
 type Interface interface {
 	// ConfigClaims returns a ConfigClaimInformer.
 	ConfigClaims() ConfigClaimInformer
+	// ConfigReferences returns a ConfigReferenceInformer.
+	ConfigReferences() ConfigReferenceInformer
 }
 
 type version struct {
@@ -28,4 +30,9 @@ func New(f internalinterfaces.SharedInformerFactory) Interface {
 // ConfigClaims returns a ConfigClaimInformer.
 func (v *version) ConfigClaims() ConfigClaimInformer {
 	return &configClaimInformer{factory: v.SharedInformerFactory}
+}
+
+// ConfigReferences returns a ConfigReferenceInformer.
+func (v *version) ConfigReferences() ConfigReferenceInformer {
+	return &configReferenceInformer{factory: v.SharedInformerFactory}
 }

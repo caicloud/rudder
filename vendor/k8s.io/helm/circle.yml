@@ -40,13 +40,13 @@ test:
     - cd "${WORKDIR}" && ./scripts/ci.sh:
         parallel: true
 
-deployment:
-  release:
-    tag: /.*/
-    commands:
-      - cd "${WORKDIR}" && ./scripts/ci/deploy.sh
-
-  canary:
-    branch: master
-    commands:
-      - cd "${WORKDIR}" && ./scripts/ci/deploy.sh
+# deployment:
+#   release:
+#     tag: /.*/
+#     commands:
+#       - cd "${WORKDIR}" && ./scripts/ci/deploy.sh
+# 
+#   canary:
+#     branch: master
+#     commands:
+#       - cd "${WORKDIR}" && ./scripts/ci/deploy.sh

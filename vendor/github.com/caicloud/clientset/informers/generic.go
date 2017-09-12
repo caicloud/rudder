@@ -36,6 +36,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=Config, Version=V1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("configclaims"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().ConfigClaims().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("configreferences"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().ConfigReferences().Informer()}, nil
 
 		// Group=Release, Version=V1alpha1
 	case release_v1alpha1.SchemeGroupVersion.WithResource("canaryreleases"):
