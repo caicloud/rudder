@@ -12,6 +12,7 @@ import (
 
 type APIResources interface {
 	ResourceFor(gvk schema.GroupVersionKind) (*Resource, error)
+	Resources() map[schema.GroupVersionKind]*Resource
 }
 
 type Resource struct {
@@ -101,4 +102,8 @@ func (ar *apiResources) ResourceFor(gvk schema.GroupVersionKind) (*Resource, err
 		return nil, fmt.Errorf("can't find api resource for: %s", gvk)
 	}
 	return resource, nil
+}
+
+func (ar *apiResources) Resources() map[schema.GroupVersionKind]*Resource {
+	return ar.resources
 }

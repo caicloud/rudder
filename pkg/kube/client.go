@@ -66,7 +66,7 @@ func (c *client) Get(namespace string, resources []string, options GetOptions) (
 			}
 			return nil, err
 		}
-		if c.own(options.OwnerReference, object) {
+		if c.own(options.OwnerReferences, object) {
 			result = append(result, object)
 		}
 	}
@@ -91,15 +91,15 @@ func (c *client) Create(namespace string, resources []string, options CreateOpti
 		// Check whether the object exists.
 		existence, err := client.Get(accessor.GetName(), metav1.GetOptions{})
 		if err != nil && !errors.IsNotFound(err) {
-			if errors.IsAlreadyExists(err) && c.own(options.OwnerReference, existence) {
+			if errors.IsAlreadyExists(err) && c.own(options.OwnerReferences, existence) {
 				// Take over it if exists.
 				// TODO(kdada): Ensure the two objects are same.
 				continue
 			}
 			return err
 		}
-		if options.OwnerReference != nil {
-			accessor.SetOwnerReferences(append(accessor.GetOwnerReferences(), *options.OwnerReference))
+		if options.OwnerReferences != nil {
+			accessor.SetOwnerReferences(append(accessor.GetOwnerReferences(), options.OwnerReferences...))
 		}
 		_, err = client.Create(obj)
 		if err != nil {
@@ -145,7 +145,7 @@ func (c *client) Update(namespace string, originalResources, targetResources []s
 	}
 	// Create
 	if len(toCreate) > 0 {
-		opts := CreateOptions{options.OwnerReference}
+		opts := CreateOptions{options.OwnerReferences}
 		if err = c.Create(namespace, toCreate, opts); err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func (c *client) Update(namespace string, originalResources, targetResources []s
 	}
 	// Delete
 	if len(toDelete) > 0 {
-		opts := DeleteOptions{options.OwnerReference}
+		opts := DeleteOptions{options.OwnerReferences}
 		if err = c.Delete(namespace, toDelete, opts); err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func (c *client) update(namespace string, updates []resources, options UpdateOpt
 		if err != nil {
 			return err
 		}
-		if !c.own(options.OwnerReference, current) {
+		if !c.own(options.OwnerReferences, current) {
 			return fmt.Errorf("attempt to update a non-affiliated object: %s/%s", accessor.GetNamespace(), accessor.GetName())
 		}
 		// TODO(kdada): Replace with merge patch when obj is TPR or CRD.
@@ -235,7 +235,7 @@ func (c *client) Delete(namespace string, resources []string, options DeleteOpti
 			}
 			return err
 		}
-		if c.own(options.OwnerReference, obj) {
+		if c.own(options.OwnerReferences, obj) {
 			deletePolicy := metav1.DeletePropagationBackground
 			err = client.Delete(accessor.GetName(), &metav1.DeleteOptions{
 				PropagationPolicy: &deletePolicy,
@@ -260,21 +260,29 @@ func (c *client) objectsByOrder(resources []string, order SortOrder) ([]runtime.
 
 // own checks whether obj have same reference. It always return
 // true when ref is nil.
-func (c *client) own(ref *metav1.OwnerReference, obj runtime.Object) bool {
+func (c *client) own(refs []metav1.OwnerReference, obj runtime.Object) bool {
 	accessor, err := c.codec.AccessorForObject(obj)
 	if err != nil {
 		return false
 	}
-	if ref == nil {
+	if refs == nil {
 		return true
 	}
-	for _, r := range accessor.GetOwnerReferences() {
-		if ref.APIVersion == r.APIVersion &&
-			ref.Kind == r.Kind &&
-			ref.Name == r.Name &&
-			ref.UID == r.UID {
-			return true
+	references := accessor.GetOwnerReferences()
+	for _, ref := range refs {
+		found := false
+		for _, r := range references {
+			if ref.APIVersion == r.APIVersion &&
+				ref.Kind == r.Kind &&
+				ref.Name == r.Name &&
+				ref.UID == r.UID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
 		}
 	}
-	return false
+	return true
 }
