@@ -42,14 +42,18 @@ type apiResources struct {
 	resources map[schema.GroupVersionKind]*Resource
 }
 
-func NewAPIResources(config *rest.Config) (APIResources, error) {
+func NewAPIResourcesByConfig(config *rest.Config) (APIResources, error) {
 	configCopy := *config
 	config = &configCopy
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := kubeClient.Discovery().ServerResources()
+	return NewAPIResources(kubeClient)
+}
+
+func NewAPIResources(client kubernetes.Interface) (APIResources, error) {
+	resources, err := client.Discovery().ServerResources()
 	if err != nil {
 		return nil, err
 	}

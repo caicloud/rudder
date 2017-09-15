@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"k8s.io/client-go/rest"
 )
 
 // Client implements CRUD methods for a group resources.
@@ -25,20 +24,16 @@ type Client interface {
 }
 
 // NewClient creates a client for resources.
-func NewClient(scheme *runtime.Scheme, config *rest.Config) (Client, error) {
-	pool, err := NewClientPool(scheme, config)
-	if err != nil {
-		return nil, err
-	}
+func NewClient(pool ClientPool, codec Codec) (Client, error) {
 	client := &client{
 		pool:  pool,
-		codec: NewYAMLCodec(scheme, scheme),
+		codec: codec,
 	}
 	return client, nil
 }
 
 type client struct {
-	pool  *ClientPool
+	pool  ClientPool
 	codec Codec
 }
 

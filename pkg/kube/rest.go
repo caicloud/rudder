@@ -14,8 +14,12 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// ClientPool describes a client pool for object scheme.
-type ClientPool struct {
+type ClientPool interface {
+	ClientFor(gvk schema.GroupVersionKind, namespace string) (*ResourceClient, error)
+}
+
+// clientPool describes a client pool for object scheme.
+type clientPool struct {
 	sync.Mutex
 	scheme    *runtime.Scheme
 	codec     runtime.ParameterCodec
@@ -27,12 +31,8 @@ type ClientPool struct {
 
 // NewClientPool create a client pool for objects. The config only contains basic configurations
 // to connect target api server.
-func NewClientPool(scheme *runtime.Scheme, config *rest.Config) (*ClientPool, error) {
-	resources, err := NewAPIResources(config)
-	if err != nil {
-		return nil, err
-	}
-	pool := &ClientPool{
+func NewClientPool(scheme *runtime.Scheme, config *rest.Config, resources APIResources) (ClientPool, error) {
+	pool := &clientPool{
 		scheme:    scheme,
 		codec:     runtime.NewParameterCodec(scheme),
 		factory:   serializer.NewCodecFactory(scheme),
@@ -46,7 +46,7 @@ func NewClientPool(scheme *runtime.Scheme, config *rest.Config) (*ClientPool, er
 // ClientFor gets a client for specified kind of an object. If APIResource of the kind is
 // non-namespaced, ignore the namespace. If the resource is namespaced and namespace is empty,
 // It uses 'Default' as the namespace.
-func (cp *ClientPool) ClientFor(gvk schema.GroupVersionKind, namespace string) (*ResourceClient, error) {
+func (cp *clientPool) ClientFor(gvk schema.GroupVersionKind, namespace string) (*ResourceClient, error) {
 	resource, err := cp.resources.ResourceFor(gvk)
 	if err != nil {
 		return nil, err
