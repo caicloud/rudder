@@ -2,6 +2,7 @@ package assistants
 
 import "github.com/caicloud/release-controller/pkg/status"
 
+// Register registers all assistant for an umpire.
 func Register(umpire status.Umpire) {
 	umpire.Employ(gvkService, ServiceAssistant)
 	umpire.Employ(gvkDeployment, DeploymentAssistant)
