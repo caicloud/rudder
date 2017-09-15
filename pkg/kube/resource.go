@@ -10,18 +10,27 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// APIResources contains all resources and kinds.
 type APIResources interface {
+	// ResourceFor gets api resource by GroupVersionKind
 	ResourceFor(gvk schema.GroupVersionKind) (*Resource, error)
+	// Resources gets all api resources.
 	Resources() map[schema.GroupVersionKind]*Resource
 }
 
+// Resource is API resource
 type Resource struct {
+	// APIResource is original api resource.
 	metav1.APIResource
-	Group        string
-	Version      string
+	// Group is the gourp name of current api resource.
+	Group string
+	// Version is the version of current api resource.
+	Version string
+	// Subresources contains the subresources of current api resource.
 	Subresources []*Resource
 }
 
+// GroupVersionKind gets the GroupVersionKind of the resource.
 func (r *Resource) GroupVersionKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   r.Group,
@@ -30,6 +39,7 @@ func (r *Resource) GroupVersionKind() schema.GroupVersionKind {
 	}
 }
 
+// GroupVersionResource gets the GroupVersionResource of the resource.
 func (r *Resource) GroupVersionResource() schema.GroupVersionResource {
 	return schema.GroupVersionResource{
 		Group:    r.Group,
@@ -38,18 +48,25 @@ func (r *Resource) GroupVersionResource() schema.GroupVersionResource {
 	}
 }
 
+// apiResources contains all api resources.
 type apiResources struct {
 	resources map[schema.GroupVersionKind]*Resource
 }
 
-func NewAPIResources(config *rest.Config) (APIResources, error) {
+// NewAPIResourcesByConfig creates APIResources by kube config.
+func NewAPIResourcesByConfig(config *rest.Config) (APIResources, error) {
 	configCopy := *config
 	config = &configCopy
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := kubeClient.Discovery().ServerResources()
+	return NewAPIResources(kubeClient)
+}
+
+// NewAPIResources creates APIResources by kube client.
+func NewAPIResources(client kubernetes.Interface) (APIResources, error) {
+	resources, err := client.Discovery().ServerResources()
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +113,7 @@ func NewAPIResources(config *rest.Config) (APIResources, error) {
 	return apiResources, nil
 }
 
+// ResourceFor gets api resource by GroupVersionKind
 func (ar *apiResources) ResourceFor(gvk schema.GroupVersionKind) (*Resource, error) {
 	resource, ok := ar.resources[gvk]
 	if !ok {
@@ -104,6 +122,7 @@ func (ar *apiResources) ResourceFor(gvk schema.GroupVersionKind) (*Resource, err
 	return resource, nil
 }
 
+// Resources gets all api resources.
 func (ar *apiResources) Resources() map[schema.GroupVersionKind]*Resource {
 	return ar.resources
 }

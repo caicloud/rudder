@@ -47,7 +47,7 @@
   branch = "master"
   name = "github.com/caicloud/clientset"
   packages = ["informers","informers/config","informers/config/v1alpha1","informers/release","informers/release/v1alpha1","kubernetes","kubernetes/scheme","kubernetes/typed/config/v1alpha1","kubernetes/typed/release/v1alpha1","listers/config/v1alpha1","listers/release/v1alpha1","pkg/apis/config/v1alpha1","pkg/apis/release/v1alpha1"]
-  revision = "0b824aa1ad4205a7bc20a6261ea8996d0f286572"
+  revision = "687c51b2724086905c267eb51dbc568865bd8f18"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -293,6 +293,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f2a9796f82f6a27947326f0b04b439800caf6405cf5ccd5089f53f40dc854be5"
+  inputs-digest = "8ee6c631b3023a7f8cbda39361c19e81648a293991163914cb803ab6bb008be0"
   solver-name = "gps-cdcl"
   solver-version = 1

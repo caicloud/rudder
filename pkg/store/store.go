@@ -10,7 +10,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// IntegrationStore is a store of generic informers.
 type IntegrationStore interface {
+	// InformerFor gets a generic informer for specified GroupVersionKind.
 	InformerFor(gvk schema.GroupVersionKind) (informers.GenericInformer, error)
 }
 
@@ -22,6 +24,7 @@ type integrationStore struct {
 	stopCh    <-chan struct{}
 }
 
+// NewIntegrationStore creates a IntegrationStore.
 func NewIntegrationStore(resources kube.APIResources, factory informers.SharedInformerFactory, stopCh <-chan struct{}) IntegrationStore {
 	return &integrationStore{
 		resources: resources,
@@ -31,6 +34,8 @@ func NewIntegrationStore(resources kube.APIResources, factory informers.SharedIn
 	}
 }
 
+// InformerFor gets a generic informer for specified GroupVersionKind.
+// The method will block until target informer is synced.
 func (is *integrationStore) InformerFor(gvk schema.GroupVersionKind) (informers.GenericInformer, error) {
 	is.lock.Lock()
 	defer is.lock.Unlock()

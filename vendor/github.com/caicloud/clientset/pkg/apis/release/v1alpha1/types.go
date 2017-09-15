@@ -171,16 +171,14 @@ type CanaryRelease struct {
 
 // CanaryReleaseSpec describes the basic info of a canary release
 type CanaryReleaseSpec struct {
-	// Template is an archived template data, aka Chart
-	Template []byte `json:"template"`
-	// Config is the config for parsing template, aka Value
-	Config string `json:"config"`
-	// Version is the version  of release TPR associated with this CanaryRelease
-	Version int32 `json:"version"`
 	// Release is the name of release TPR associated with this CanaryRelease
 	Release string `json:"release"`
+	// Version is the version  of release TPR associated with this CanaryRelease
+	Version int32 `json:"version"`
 	// Path is the path of sub app which needs Canary release
 	Path string `json:"path"`
+	// Config is the config for parsing template, aka Value
+	Config string `json:"config"`
 	// Service is an array of services in current release node
 	Service []CanaryService `json:"services,omitempty"`
 	// Resources specify cpu/memory usage of current canary release

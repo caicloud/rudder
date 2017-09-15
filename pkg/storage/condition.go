@@ -6,6 +6,7 @@ import (
 	apiv1 "k8s.io/client-go/pkg/api/v1"
 )
 
+// Reasons for releases
 const (
 	ReasonAvailable   = "Available"
 	ReasonFailure     = "Failure"
@@ -14,6 +15,7 @@ const (
 	ReasonRollbacking = "Rollbacking"
 )
 
+// ConditionAvailable returns an available condition.
 func ConditionAvailable() releaseapi.ReleaseCondition {
 	return releaseapi.ReleaseCondition{
 		Type:               releaseapi.ReleaseAvailable,
@@ -24,6 +26,7 @@ func ConditionAvailable() releaseapi.ReleaseCondition {
 	}
 }
 
+// ConditionFailure returns a failure condition.
 func ConditionFailure(message string) releaseapi.ReleaseCondition {
 	return releaseapi.ReleaseCondition{
 		Type:               releaseapi.ReleaseFailure,
@@ -34,6 +37,7 @@ func ConditionFailure(message string) releaseapi.ReleaseCondition {
 	}
 }
 
+// ConditionCreating returns a creating condition.
 func ConditionCreating() releaseapi.ReleaseCondition {
 	return releaseapi.ReleaseCondition{
 		Type:               releaseapi.ReleaseProgressing,
@@ -44,6 +48,7 @@ func ConditionCreating() releaseapi.ReleaseCondition {
 	}
 }
 
+// ConditionUpdating returns a updating condition.
 func ConditionUpdating() releaseapi.ReleaseCondition {
 	return releaseapi.ReleaseCondition{
 		Type:               releaseapi.ReleaseProgressing,
@@ -54,6 +59,7 @@ func ConditionUpdating() releaseapi.ReleaseCondition {
 	}
 }
 
+// ConditionRollbacking returns a rollbacking condition.
 func ConditionRollbacking() releaseapi.ReleaseCondition {
 	return releaseapi.ReleaseCondition{
 		Type:               releaseapi.ReleaseProgressing,
