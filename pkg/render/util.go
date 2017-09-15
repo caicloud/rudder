@@ -11,5 +11,13 @@ func MergeResources(resources []string) string {
 
 // SplitManifest splits a manifest to a list of resources
 func SplitManifest(manifest string) []string {
-	return strings.Split(manifest, delimiter)
+	result := strings.Split(manifest, delimiter)
+	length := 0
+	for _, res := range result {
+		if r := strings.TrimSpace(res); r != "" {
+			result[length] = r
+			length++
+		}
+	}
+	return result[:length:length]
 }
