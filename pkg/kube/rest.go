@@ -14,7 +14,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// ClientPool is a pool of clients.
 type ClientPool interface {
+	// ClientFor gets a client for specified kind of an object. If APIResource of the kind is
+	// non-namespaced, ignore the namespace. If the resource is namespaced and namespace is empty,
+	// It uses 'Default' as the namespace.
 	ClientFor(gvk schema.GroupVersionKind, namespace string) (*ResourceClient, error)
 }
 
