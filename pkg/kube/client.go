@@ -86,12 +86,12 @@ func (c *client) Create(namespace string, resources []string, options CreateOpti
 		// Check whether the object exists.
 		existence, err := client.Get(accessor.GetName(), metav1.GetOptions{})
 		if err != nil && !errors.IsNotFound(err) {
-			if errors.IsAlreadyExists(err) && c.own(options.OwnerReferences, existence) {
-				// Take over it if exists.
-				// TODO(kdada): Ensure the two objects are same.
-				continue
-			}
 			return err
+		}
+		if err == nil && c.own(options.OwnerReferences, existence) {
+			// Take over it if exists.
+			// TODO(kdada): Ensure the two objects are same.
+			continue
 		}
 		if options.OwnerReferences != nil {
 			accessor.SetOwnerReferences(append(accessor.GetOwnerReferences(), options.OwnerReferences...))
