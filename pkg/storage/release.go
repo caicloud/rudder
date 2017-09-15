@@ -23,34 +23,51 @@ const (
 	LabelReleaseVersion = "release.caicloud.io/version"
 )
 
+// ReleaseBackend is a backend for releases and release histories.
 type ReleaseBackend interface {
+	// ReleaseStorage returns a corresponding storage for the release.
 	ReleaseStorage(release *releaseapi.Release) ReleaseStorage
 }
 
+// ReleaseStorage is a storage for a release.
 type ReleaseStorage interface {
 	ReleaseHolder
 	ReleaseHolderExpansion
 	ReleaseHistoryHolder
 }
 
+// ReleaseHolder contains a bundle of methods for manipulating release.
 type ReleaseHolder interface {
+	// Release returns a cached release. It may be not a latest one.
+	// Don't use the release to cover running release.
 	Release() (*releaseapi.Release, error)
+	// Update updates the release.
 	Update(release *releaseapi.Release) (*releaseapi.Release, error)
+	// Patch patches the release with a modifier.
 	Patch(modifier func(release *releaseapi.Release)) (*releaseapi.Release, error)
+	// Rollback rollbacks running release to specified version.
 	Rollback(version int32) (*releaseapi.Release, error)
+	// Delete deletes the release.
 	Delete() error
 }
 
+// ReleaseHolderExpansion extends the methods of release.
 type ReleaseHolderExpansion interface {
+	// UpdateStatus update the status of running release.
 	UpdateStatus(modifier func(status *releaseapi.ReleaseStatus)) (*releaseapi.Release, error)
+	// AddCondition adds a condition to running release.
 	AddCondition(condition releaseapi.ReleaseCondition) (*releaseapi.Release, error)
 }
 
+// ReleaseHistoryHolder contains methods for release histories
 type ReleaseHistoryHolder interface {
+	// History gets specified version of release.
 	History(version int32) (*releaseapi.ReleaseHistory, error)
+	// Histories returns all histories of release.
 	Histories() ([]releaseapi.ReleaseHistory, error)
 }
 
+// NewReleaseBackend creates a release backend.
 func NewReleaseBackend(client releasev1alpha1.ReleaseV1alpha1Interface) ReleaseBackend {
 	return &releaseBackend{
 		client: client,
@@ -61,6 +78,7 @@ type releaseBackend struct {
 	client releasev1alpha1.ReleaseV1alpha1Interface
 }
 
+// ReleaseStorage returns a corresponding storage for the release.
 func (rb *releaseBackend) ReleaseStorage(release *releaseapi.Release) ReleaseStorage {
 	return &releaseStorage{
 		name:                 release.Name,
@@ -77,10 +95,13 @@ type releaseStorage struct {
 	releaseHistoryClient releasev1alpha1.ReleaseHistoryInterface
 }
 
+// Release returns a cached release. It may be not a latest one.
+// Don't use the release to cover running release.
 func (rs *releaseStorage) Release() (*releaseapi.Release, error) {
 	return rs.release, nil
 }
 
+// Update updates the release.
 func (rs *releaseStorage) Update(release *releaseapi.Release) (*releaseapi.Release, error) {
 	version := int32(1)
 	if release.Status.Version > 0 {
@@ -110,6 +131,7 @@ func (rs *releaseStorage) Update(release *releaseapi.Release) (*releaseapi.Relea
 	})
 }
 
+// Patch patches the release with a modifier.
 func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*releaseapi.Release, error) {
 	oldOne, err := json.Marshal(rs.release)
 	if err != nil {
@@ -134,6 +156,7 @@ func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*re
 	return rs.release, nil
 }
 
+// Rollback rollbacks running release to specified version.
 func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 	history, err := rs.History(version)
 	if err != nil {
@@ -151,6 +174,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 	})
 }
 
+// Delete deletes the release.
 func (rs *releaseStorage) Delete() error {
 	err := rs.releaseClient.Delete(rs.name, &metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
@@ -167,10 +191,12 @@ func (rs *releaseStorage) Delete() error {
 	return nil
 }
 
+// History gets specified version of release.
 func (rs *releaseStorage) History(version int32) (*releaseapi.ReleaseHistory, error) {
 	return rs.releaseHistoryClient.Get(generateReleaseHistoryName(rs.name, version), metav1.GetOptions{})
 }
 
+// Histories returns all histories of release.
 func (rs *releaseStorage) Histories() ([]releaseapi.ReleaseHistory, error) {
 	histories, err := rs.releaseHistoryClient.List(metav1.ListOptions{
 		LabelSelector: labels.Set{
@@ -186,18 +212,21 @@ func (rs *releaseStorage) Histories() ([]releaseapi.ReleaseHistory, error) {
 	return histories.Items, nil
 }
 
+// UpdateStatus update the status of running release.
 func (rs *releaseStorage) UpdateStatus(modifier func(status *releaseapi.ReleaseStatus)) (*releaseapi.Release, error) {
 	return rs.Patch(func(release *releaseapi.Release) {
 		modifier(&release.Status)
 	})
 }
 
+// AddCondition adds a condition to running release.
 func (rs *releaseStorage) AddCondition(condition releaseapi.ReleaseCondition) (*releaseapi.Release, error) {
 	return rs.Patch(func(release *releaseapi.Release) {
 		release.Status.Conditions = append(release.Status.Conditions, condition)
 	})
 }
 
+// shortenConditions limits the length of conditions.
 func shortenConditions(release *releaseapi.Release) {
 	const maxLength = 5
 	length := len(release.Status.Conditions)
@@ -206,10 +235,12 @@ func shortenConditions(release *releaseapi.Release) {
 	}
 }
 
+// generateReleaseHistoryName generates the name of release history.
 func generateReleaseHistoryName(name string, version int32) string {
 	return fmt.Sprintf("%s-v%d", name, version)
 }
 
+// constructReleaseHistory generates a release history for a release.
 func constructReleaseHistory(release *releaseapi.Release, version int32) *releaseapi.ReleaseHistory {
 	// Create History
 	return &releaseapi.ReleaseHistory{
