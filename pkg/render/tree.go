@@ -144,7 +144,7 @@ func (n *node) add(paths []string, resources []string) error {
 			parent = target
 			continue
 		}
-		newNode := newNode(strings.Join(paths[:i+1], "/"), []string{})
+		newNode := newNode(strings.Join(paths[:i+2], "/"), []string{})
 		parent.children[path] = newNode
 		parent = newNode
 	}
