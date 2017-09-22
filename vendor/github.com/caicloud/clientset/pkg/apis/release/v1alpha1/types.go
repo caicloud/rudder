@@ -177,13 +177,13 @@ type CanaryReleaseSpec struct {
 	Version int32 `json:"version"`
 	// Path is the path of sub app which needs Canary release
 	Path string `json:"path"`
-	// Config is the config for parsing template, aka Value
+	// Config is the sub config for parsing template, aka Value
 	Config string `json:"config"`
 	// Service is an array of services in current release node
 	Service []CanaryService `json:"services,omitempty"`
 	// Resources specify cpu/memory usage of current canary release
 	Resources apiv1.ResourceRequirements `json:"resources,omitempty"`
-	// Transition means this CanaryRelease needs to be next Transition
+	// Transition is the next phase this CanaryRelease needs to transformed into
 	Transition CanaryTrasition `json:"transition,omitempty"`
 }
 
@@ -235,6 +235,9 @@ type CanaryConfig struct {
 
 // CanaryReleaseStatus describes the current status of a canary release
 type CanaryReleaseStatus struct {
+	// Phase is the current phase of canary release.
+	// It will be set after the transition in spec successfully.
+	Phase CanaryTrasition `json:"phase,omitempty"`
 	// Manifest is the generated kubernetes resources from template
 	Manifest string `json:"manifest,omitempty"`
 	// LastUpdateTime is the last update time of current release
@@ -243,10 +246,26 @@ type CanaryReleaseStatus struct {
 	Conditions []CanaryReleaseCondition `json:"conditions,omitempty"`
 }
 
+// CanaryReleaseConditionType describes the type of condition
+type CanaryReleaseConditionType string
+
+const (
+	// CanaryReleaseAvailable means the resources of release are available and can render service.
+	CanaryReleaseAvailable CanaryReleaseConditionType = "Available"
+	// CanaryReleaseProgressing means release is playing a mutation. It occurs when create/update
+	// a canary release. If some bad thing occurs, canary release transfers to ReleaseFailure.
+	CanaryReleaseProgressing CanaryReleaseConditionType = "Progressing"
+	// CanaryReleaseFailure means some parts of cananry release falled into wrong field. Some parts may work
+	// as usual, but the canary release can't provide complete service.
+	CanaryReleaseFailure CanaryReleaseConditionType = "Failure"
+	// CanaryReleaseArchived means this canary release has been archived
+	CanaryReleaseArchived CanaryReleaseConditionType = "Archived"
+)
+
 // CanaryReleaseCondition describes a condition of the canary release status
 type CanaryReleaseCondition struct {
 	// Type of release condition.
-	Type ReleaseConditionType `json:"type"`
+	Type CanaryReleaseConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status apiv1.ConditionStatus `json:"status"`
 	// Last time the condition transit from one status to another.

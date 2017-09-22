@@ -7,6 +7,7 @@ Copyright 2017 caicloud authors. All rights reserved.
 package informers
 
 import (
+	apiextensions "github.com/caicloud/clientset/informers/apiextensions"
 	config "github.com/caicloud/clientset/informers/config"
 	release "github.com/caicloud/clientset/informers/release"
 	kubernetes "github.com/caicloud/clientset/kubernetes"
@@ -30,8 +31,13 @@ func NewSharedInformerFactory(client kubernetes.Interface, defaultResync time.Du
 type SharedInformerFactory interface {
 	informers.SharedInformerFactory
 
+	Apiextensions() apiextensions.Interface
 	Config() config.Interface
 	Release() release.Interface
+}
+
+func (f *sharedInformerFactory) Apiextensions() apiextensions.Interface {
+	return apiextensions.New(f)
 }
 
 func (f *sharedInformerFactory) Config() config.Interface {

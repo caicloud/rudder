@@ -5,6 +5,7 @@ Copyright 2017 caicloud authors. All rights reserved.
 package scheme
 
 import (
+	apiextensionsv1beta1 "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1"
 	configv1alpha1 "github.com/caicloud/clientset/pkg/apis/config/v1alpha1"
 	releasev1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +35,7 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
+	apiextensionsv1beta1.AddToScheme(scheme)
 	configv1alpha1.AddToScheme(scheme)
 	releasev1alpha1.AddToScheme(scheme)
 

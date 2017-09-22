@@ -5,6 +5,7 @@ Copyright 2017 caicloud authors. All rights reserved.
 package kubernetes
 
 import (
+	apiextensionsv1beta1 "github.com/caicloud/clientset/kubernetes/typed/apiextensions/v1beta1"
 	configv1alpha1 "github.com/caicloud/clientset/kubernetes/typed/config/v1alpha1"
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
 	glog "github.com/golang/glog"
@@ -15,6 +16,9 @@ import (
 
 type Interface interface {
 	kubernetes.Interface
+	ApiextensionsV1beta1() apiextensionsv1beta1.ApiextensionsV1beta1Interface
+	// Deprecated: please explicitly pick a version if possible.
+	Apiextensions() apiextensionsv1beta1.ApiextensionsV1beta1Interface
 	ConfigV1alpha1() configv1alpha1.ConfigV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Config() configv1alpha1.ConfigV1alpha1Interface
@@ -27,8 +31,26 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*kubernetes.Clientset
+	*apiextensionsv1beta1.ApiextensionsV1beta1Client
 	*configv1alpha1.ConfigV1alpha1Client
 	*releasev1alpha1.ReleaseV1alpha1Client
+}
+
+// ApiextensionsV1beta1 retrieves the ApiextensionsV1beta1Client
+func (c *Clientset) ApiextensionsV1beta1() apiextensionsv1beta1.ApiextensionsV1beta1Interface {
+	if c == nil {
+		return nil
+	}
+	return c.ApiextensionsV1beta1Client
+}
+
+// Deprecated: Apiextensions retrieves the default version of ApiextensionsClient.
+// Please explicitly pick a version.
+func (c *Clientset) Apiextensions() apiextensionsv1beta1.ApiextensionsV1beta1Interface {
+	if c == nil {
+		return nil
+	}
+	return c.ApiextensionsV1beta1Client
 }
 
 // ConfigV1alpha1 retrieves the ConfigV1alpha1Client
@@ -73,6 +95,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
+	cs.ApiextensionsV1beta1Client, err = apiextensionsv1beta1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.ConfigV1alpha1Client, err = configv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -94,6 +120,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
+	cs.ApiextensionsV1beta1Client = apiextensionsv1beta1.NewForConfigOrDie(c)
 	cs.ConfigV1alpha1Client = configv1alpha1.NewForConfigOrDie(c)
 	cs.ReleaseV1alpha1Client = releasev1alpha1.NewForConfigOrDie(c)
 
@@ -104,6 +131,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.ApiextensionsV1beta1Client = apiextensionsv1beta1.New(c)
 	cs.ConfigV1alpha1Client = configv1alpha1.New(c)
 	cs.ReleaseV1alpha1Client = releasev1alpha1.New(c)
 
