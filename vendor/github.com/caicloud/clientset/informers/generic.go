@@ -7,6 +7,7 @@ Copyright 2017 caicloud authors. All rights reserved.
 package informers
 
 import (
+	v1beta1 "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1"
 	v1alpha1 "github.com/caicloud/clientset/pkg/apis/config/v1alpha1"
 	release_v1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,7 +34,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (informers.GenericInformer, error) {
 	switch resource {
-	// Group=Config, Version=V1alpha1
+	// Group=Apiextensions, Version=V1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apiextensions().V1beta1().CustomResourceDefinitions().Informer()}, nil
+
+		// Group=Config, Version=V1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("configclaims"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().ConfigClaims().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("configreferences"):
