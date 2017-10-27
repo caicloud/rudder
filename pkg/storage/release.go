@@ -147,6 +147,9 @@ func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*re
 	if err != nil {
 		return nil, err
 	}
+	if len(patch) == 2 && string(patch) == "{}" {
+		return rs.release, nil
+	}
 	rel, err := rs.releaseClient.Patch(rs.name, types.MergePatchType, patch)
 	if err != nil {
 		return nil, err
