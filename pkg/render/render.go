@@ -59,6 +59,9 @@ func (r *render) Render(options *RenderOptions) (Carrier, error) {
 		IsInstall: true,
 	}
 	values, err := chartutil.ToRenderValues(chart, &chartapi.Config{Raw: options.Config}, releaseOpts)
+	if err != nil {
+		return nil, err
+	}
 	resources, err := r.renderResources(chart, values)
 	if err != nil {
 		return nil, err
