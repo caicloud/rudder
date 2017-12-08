@@ -1,80 +1,102 @@
-def TAG = "${BUILD_NUMBER}"
-def REGISTRY = "cargo.caicloudprivatetest.com"
-def IMAGE_TAG = "${REGISTRY}/caicloud/release-controller:${TAG}"
+def releaseImage = "caicloud/release-controller:${params.imageTag}"
+
+
 
 podTemplate(
     cloud: 'dev-cluster',
     namespace: 'kube-system',
-    name: 'release-controller',
+    // change the label to your component name.
     label: 'release-controller',
     containers: [
+        // a Jenkins agent (FKA "slave") using JNLP to establish connection.
         containerTemplate(
             name: 'jnlp',
-            image: "cargo.caicloud.io/circle/jnlp:2.62",
-            alwaysPullImage: true,
+            // alwaysPullImage: true,
+            image: 'cargo.caicloudprivatetest.com/caicloud/jenkins/jnlp-slave:3.14-1-alpine',
             command: '',
             args: '${computer.jnlpmac} ${computer.name}',
         ),
+        // docker in docker
         containerTemplate(
-            name: 'dind', 
-            image: "cargo.caicloud.io/caicloud/docker:17.03-dind", 
-            alwaysPullImage: true,
+            name: 'dind',
+            image: 'cargo.caicloudprivatetest.com/caicloud/docker:17.09-dind',
             ttyEnabled: true,
-            command: '', 
+            command: '',
             args: '--host=unix:///home/jenkins/docker.sock',
             privileged: true,
         ),
+        // golang with docker client and tools
         containerTemplate(
             name: 'golang',
-            image: "cargo.caicloud.io/caicloud/golang-docker:1.8.1-17.05",
-            alwaysPullImage: true,
+            image: 'cargo.caicloudprivatetest.com/caicloud/golang-docker:1.9-17.09',
             ttyEnabled: true,
             command: '',
             args: '',
             envVars: [
                 containerEnvVar(key: 'DOCKER_HOST', value: 'unix:///home/jenkins/docker.sock'),
-                containerEnvVar(key: 'DOCKER_API_VERSION', value: '1.26'),
+                // Change the environment variable WORKDIR as needed.
                 containerEnvVar(key: 'WORKDIR', value: '/go/src/github.com/caicloud/release-controller')
             ],
-        ),
+        )
     ]
 ) {
+    // Change the node name as the podTemplate label you set.
     node('release-controller') {
         stage('Checkout') {
-            checkout scm
+           checkout scm
         }
+        // Change the container name as the container you use for compiling.
         container('golang') {
             ansiColor('xterm') {
-
+                // You can define the stage as you need.
                 stage("Complie") {
                     sh('''
-                        set -e 
+                        set -e
                         mkdir -p $(dirname ${WORKDIR})
                         rm -rf ${WORKDIR}
-                        ln -sf $(pwd) ${WORKDIR}
+                        ln -sfv $(pwd) ${WORKDIR}
+ 
+ 
                         cd ${WORKDIR}
-                        make build-local
+                       
+                        make build
                     ''')
                 }
-
-                stage('Run e2e test') {
+ 
+ 
+ 
+                stage('Unit test') {
                     sh('''
-                        echo "skip e2e test: it is not accomplished now"
+                        set -e
+                        cd ${WORKDIR}
+ 
+ 
+                        make test
                     ''')
                 }
-            }
-
-            stage("Build image and publish") {
-                sh("VERSION=${TAG} make container") 
-
-                docker.withRegistry("https://${REGISTRY}", "cargo-private-admin") {
-                    docker.image(IMAGE_TAG).push()
+ 
+ 
+ 
+                stage('Build and push image') {
+                    sh('''
+                        set -e
+                        cd ${WORKDIR}
+                    ''')
+ 
+ 
+ 
+                    sh("docker build -t ${releaseImage} -f build/release/Dockerfile .")
+ 
+ 
+ 
+                    // Whether publish the images is controlled by the params.
+                    if (params.publish) {
+                        docker.withRegistry("https://cargo.caicloudprivatetest.com", "cargo-private-admin") {
+                            docker.image(releaseImage).push()
+                        }
+                    }
                 }
             }
-        }
-
-        stage('Deploy') {
-            echo "Coming soon..."
         }
     }
 }

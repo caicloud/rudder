@@ -26,7 +26,7 @@
 #
 
 # Current version of the project.
-VERSION ?= v0.1.0
+VERSION ?= v0.1.1
 
 # This repo's root import path (under GOPATH).
 ROOT := github.com/caicloud/release-controller
@@ -97,19 +97,21 @@ build-local:
 
 build-linux:
 	@for target in $(TARGETS); do                                                      \
-	  docker run --rm                                                                  \
-	    -v $(PWD):/go/src/$(ROOT)                                                      \
-	    -w /go/src/$(ROOT)                                                             \
-	    -e GOOS=linux                                                                  \
-	    -e GOARCH=amd64                                                                \
-	    -e GOPATH=/go                                                                  \
-		-e CGO_ENABLED=0                                                               \
-	    cargo.caicloud.io/caicloud/golang:1.9.0-alpine3.6                              \
-	      go build -i -v -o $(OUTPUT_DIR)/$${target}                                   \
-	        -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)                  \
-	        -X $(ROOT)/pkg/version.COMMIT=$(COMMIT)                                    \
-	        -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)"                                   \
-	        $(CMD_DIR)/$${target};                                                     \
+	  for registry in $(REGISTRIES); do                                                \
+	    docker run --rm                                                                \
+	      -v $(PWD):/go/src/$(ROOT)                                                    \
+	      -w /go/src/$(ROOT)                                                           \
+	      -e GOOS=linux                                                                \
+	      -e GOARCH=amd64                                                              \
+	      -e GOPATH=/go                                                                \
+	      -e CGO_ENABLED=0                                                             \
+	        $${registry}/golang:1.9.2-debian-jessie                                    \
+	          go build -i -v -o $(OUTPUT_DIR)/$${target}                               \
+	            -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)              \
+	            -X $(ROOT)/pkg/version.COMMIT=$(COMMIT)                                \
+	            -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)"                               \
+	            $(CMD_DIR)/$${target};                                                 \
+	  done                                                                             \
 	done
 
 container: build-linux
@@ -118,6 +120,14 @@ container: build-linux
 	    image=$(IMAGE_PREFIX)$${target}$(IMAGE_SUFFIX);                                \
 	    docker build -t $${registry}/$${image}:$(VERSION)                              \
 	      -f $(BUILD_DIR)/$${target}/Dockerfile .;                                     \
+	  done                                                                             \
+	done
+
+push: container
+	@for target in $(TARGETS); do                                                      \
+	  for registry in $(REGISTRIES); do                                                \
+	    image=$(IMAGE_PREFIX)$${target}$(IMAGE_SUFFIX);                                \
+	    docker push $${registry}/$${image}:$(VERSION);                                 \
 	  done                                                                             \
 	done
 
