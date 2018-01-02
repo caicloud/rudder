@@ -35,6 +35,8 @@ type GarbageCollector struct {
 	store         store.IntegrationStore
 	releaseLister listerrelease.ReleaseLister
 	synced        []cache.InformerSynced
+	// ignored indicates which resources should be ignored
+	ignored []schema.GroupVersionKind
 }
 
 // NewGarbageCollector creates a garbage collector.
@@ -44,6 +46,7 @@ func NewGarbageCollector(
 	store store.IntegrationStore,
 	releaseInformer informerrelease.ReleaseInformer,
 	targets []schema.GroupVersionKind,
+	ignored []schema.GroupVersionKind,
 ) (*GarbageCollector, error) {
 	gc := &GarbageCollector{
 		clients:       clients,
@@ -52,6 +55,7 @@ func NewGarbageCollector(
 		queue:         workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		releaseLister: releaseInformer.Lister(),
 		synced:        []cache.InformerSynced{releaseInformer.Informer().HasSynced},
+		ignored:       ignored,
 	}
 	for _, target := range targets {
 		gi, err := store.InformerFor(target)
@@ -138,12 +142,9 @@ func (gc *GarbageCollector) processNextWorkItem() bool {
 
 // collect handles existent resources. So it doesn't handle deletion events.
 func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Object) {
-	if gvk == gvkRelease {
-		// Ignore releases
-		// We don't need handle release type
+	if gc.ignore(obj) {
 		return
 	}
-
 	accessor, err := gc.codec.AccessorForObject(obj)
 	if err != nil {
 		glog.Errorf("Can't find out the accessor for resource: %v", err)
@@ -186,6 +187,12 @@ func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Obj
 	}
 
 	if release == nil || release.GetUID() != owner.UID {
+		// Log the release info.
+		if release != nil {
+			glog.V(4).Info("%+v", release)
+		}
+		glog.V(4).Info("%+v", obj)
+
 		// Delete the resource if its target release is not exist.
 		err = client.Delete(accessor.GetName(), options)
 		if err != nil {
@@ -228,6 +235,22 @@ func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Obj
 		glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
 		return
 	}
+}
+
+// ignore checks if an object should be ignored.
+func (gc *GarbageCollector) ignore(obj runtime.Object) bool {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	if gvk == gvkRelease {
+		// Ignore releases
+		// We don't need handle release type
+		return true
+	}
+	for _, i := range gc.ignored {
+		if i == gvk {
+			return true
+		}
+	}
+	return false
 }
 
 // isAvailable checks if release is available.

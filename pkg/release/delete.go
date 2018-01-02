@@ -6,6 +6,7 @@ import (
 	"github.com/caicloud/release-controller/pkg/render"
 	"github.com/caicloud/release-controller/pkg/storage"
 	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func (rc *releaseContext) deleteRelease(backend storage.ReleaseStorage, release *releaseapi.Release) error {
@@ -14,6 +15,7 @@ func (rc *releaseContext) deleteRelease(backend storage.ReleaseStorage, release 
 	manifests := render.SplitManifest(release.Status.Manifest)
 	err := rc.client.Delete(release.Namespace, manifests, kube.DeleteOptions{
 		OwnerReferences: referencesForRelease(release),
+		Filter:          rc.ignore,
 	})
 	if err != nil {
 		glog.Errorf("Failed to delete release: %v", err)
@@ -27,4 +29,14 @@ func (rc *releaseContext) deleteRelease(backend storage.ReleaseStorage, release 
 	}
 	glog.V(4).Infof("Deleted release: %s/%s", release.Namespace, release.Name)
 	return nil
+}
+
+// ignore checks if an object should be ignored.
+func (rc *releaseContext) ignore(obj runtime.Object) bool {
+	for _, i := range rc.ignored {
+		if i == obj.GetObjectKind().GroupVersionKind() {
+			return true
+		}
+	}
+	return false
 }

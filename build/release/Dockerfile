@@ -11,6 +11,6 @@ RUN mkdir /data
 COPY bin/release /release
 
 ENTRYPOINT ["/release"]
-CMD ["-v3"]
+CMD ["-v4"]
 
 

@@ -54,6 +54,7 @@ func startReleaseController(ctx ControllerContext) error {
 		ctx.Codec,
 		ctx.KubeClient.ReleaseV1alpha1(),
 		ctx.InformerFactory.Release().V1alpha1().Releases(),
+		ctx.IgnoredKinds,
 	)
 	if err != nil {
 		return err
@@ -83,6 +84,7 @@ func startGCController(ctx ControllerContext) error {
 		ctx.InformerStore,
 		ctx.InformerFactory.Release().V1alpha1().Releases(),
 		ctx.AvailableKinds,
+		ctx.IgnoredKinds,
 	)
 	if err != nil {
 		return err

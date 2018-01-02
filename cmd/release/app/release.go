@@ -40,6 +40,8 @@ type ControllerContext struct {
 	InformerStore store.IntegrationStore
 	// AvailableKinds provides all kinds that controllers can handle.
 	AvailableKinds []schema.GroupVersionKind
+	// IgnoredKinds provides kinds which need be ignored when deleted.
+	IgnoredKinds []schema.GroupVersionKind
 	// Stop is the stop channel
 	Stop <-chan struct{}
 }
@@ -80,6 +82,7 @@ func Run(s *options.ReleaseServer) error {
 		InformerFactory: informerFactory,
 		InformerStore:   informerStore,
 		AvailableKinds:  AvailableKinds(),
+		IgnoredKinds:    IgnoredKinds(),
 		Stop:            stop,
 	}
 	initializers, err := NewControllerInitializers(s.Controllers)
@@ -92,7 +95,6 @@ func Run(s *options.ReleaseServer) error {
 	}
 	ctx.InformerFactory.Start(ctx.Stop)
 	select {}
-	panic("unreachable")
 }
 
 // AvailableKinds returns all kinds can be used by controllers.
@@ -106,6 +108,13 @@ func AvailableKinds() []schema.GroupVersionKind {
 		batchv1.SchemeGroupVersion.WithKind("Job"),
 		appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet"),
 		apiv1.SchemeGroupVersion.WithKind("Service"),
+		corev1.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
+	}
+}
+
+// IgnoredKinds provides kinds which need be ignored when deleted.
+func IgnoredKinds() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
 		corev1.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
 	}
 }
