@@ -9,6 +9,7 @@ import (
 	"github.com/caicloud/release-controller/pkg/render"
 	"github.com/caicloud/release-controller/pkg/storage"
 	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type ReleaseAction string
@@ -22,14 +23,16 @@ const (
 )
 
 type releaseContext struct {
-	render render.Render
-	client kube.Client
+	render  render.Render
+	client  kube.Client
+	ignored []schema.GroupVersionKind
 }
 
-func NewReleaseHandler(render render.Render, client kube.Client) Handler {
+func NewReleaseHandler(render render.Render, client kube.Client, ignored []schema.GroupVersionKind) Handler {
 	return (&releaseContext{
-		render: render,
-		client: client,
+		render:  render,
+		client:  client,
+		ignored: ignored,
 	}).handle
 }
 

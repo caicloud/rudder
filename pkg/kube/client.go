@@ -1,9 +1,9 @@
 package kube
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -153,7 +153,10 @@ func (c *client) Update(namespace string, originalResources, targetResources []s
 	}
 	// Delete
 	if len(toDelete) > 0 {
-		opts := DeleteOptions{options.OwnerReferences}
+		opts := DeleteOptions{
+			OwnerReferences: options.OwnerReferences,
+			Filter:          options.Filter,
+		}
 		if err = c.Delete(namespace, toDelete, opts); err != nil {
 			return err
 		}
@@ -171,19 +174,15 @@ type resources struct {
 func (c *client) update(namespace string, updates []resources, options UpdateOptions) error {
 	// TODO(kdada): sort updates by InstallOrder
 	for _, u := range updates {
-		origin, err := yaml.YAMLToJSON([]byte(u.origin))
+		origin, accessor, err := c.codec.AccessorForResource(u.origin)
 		if err != nil {
 			return err
 		}
-		target, err := yaml.YAMLToJSON([]byte(u.target))
+		target, err := c.codec.ResourceToObject(u.target)
 		if err != nil {
 			return err
 		}
-		obj, accessor, err := c.codec.AccessorForResource(u.origin)
-		if err != nil {
-			return err
-		}
-		client, err := c.pool.ClientFor(obj.GetObjectKind().GroupVersionKind(), namespace)
+		client, err := c.pool.ClientFor(origin.GetObjectKind().GroupVersionKind(), namespace)
 		if err != nil {
 			return err
 		}
@@ -194,10 +193,27 @@ func (c *client) update(namespace string, updates []resources, options UpdateOpt
 		if !c.own(options.OwnerReferences, current) {
 			return fmt.Errorf("attempt to update a non-affiliated object: %s/%s", accessor.GetNamespace(), accessor.GetName())
 		}
-		// TODO(kdada): Replace with merge patch when obj is TPR or CRD.
-		patch, err := strategicpatch.CreateTwoWayMergePatch(origin, target, obj)
+		if options.Modifier != nil {
+			if err = options.Modifier(origin, target, current); err != nil {
+				return err
+			}
+		}
+		old, err := json.Marshal(origin)
 		if err != nil {
 			return err
+		}
+		new, err := json.Marshal(target)
+		if err != nil {
+			return err
+		}
+		// TODO(kdada): Replace with merge patch when obj is TPR or CRD.
+		patch, err := strategicpatch.CreateTwoWayMergePatch([]byte(old), []byte(new), current)
+		if err != nil {
+			return err
+		}
+		// Ignore empty patch.
+		if len(patch) == 2 && string(patch) == "{}" {
+			return nil
 		}
 		_, err = client.Patch(accessor.GetName(), types.StrategicMergePatchType, patch)
 		if err != nil {
@@ -214,6 +230,9 @@ func (c *client) Delete(namespace string, resources []string, options DeleteOpti
 		return err
 	}
 	for _, obj := range objs {
+		if options.Filter != nil && options.Filter(obj) {
+			continue
+		}
 		accessor, err := c.codec.AccessorForObject(obj)
 		if err != nil {
 			return err
