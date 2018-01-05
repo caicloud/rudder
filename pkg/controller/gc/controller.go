@@ -142,7 +142,7 @@ func (gc *GarbageCollector) processNextWorkItem() bool {
 
 // collect handles existent resources. So it doesn't handle deletion events.
 func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Object) {
-	if gc.ignore(obj) {
+	if gc.ignore(gvk) {
 		return
 	}
 	accessor, err := gc.codec.AccessorForObject(obj)
@@ -189,9 +189,9 @@ func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Obj
 	if release == nil || release.GetUID() != owner.UID {
 		// Log the release info.
 		if release != nil {
-			glog.V(4).Info("%+v", release)
+			glog.V(4).Infof("%+v", release)
 		}
-		glog.V(4).Info("%+v", obj)
+		glog.V(4).Infof("%+v", obj)
 
 		// Delete the resource if its target release is not exist.
 		err = client.Delete(accessor.GetName(), options)
@@ -238,8 +238,7 @@ func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Obj
 }
 
 // ignore checks if an object should be ignored.
-func (gc *GarbageCollector) ignore(obj runtime.Object) bool {
-	gvk := obj.GetObjectKind().GroupVersionKind()
+func (gc *GarbageCollector) ignore(gvk schema.GroupVersionKind) bool {
 	if gvk == gvkRelease {
 		// Ignore releases
 		// We don't need handle release type
