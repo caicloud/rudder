@@ -213,7 +213,7 @@ func (c *client) update(namespace string, updates []resources, options UpdateOpt
 		}
 		// Ignore empty patch.
 		if len(patch) == 2 && string(patch) == "{}" {
-			return nil
+			continue
 		}
 		_, err = client.Patch(accessor.GetName(), types.StrategicMergePatchType, patch)
 		if err != nil {
