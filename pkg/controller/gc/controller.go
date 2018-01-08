@@ -182,8 +182,11 @@ func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Obj
 	// 2. The release is available and the resource is not in the manifest of release.
 
 	policy := metav1.DeletePropagationBackground
+	uid := accessor.GetUID()
 	options := &metav1.DeleteOptions{
 		PropagationPolicy: &policy,
+		// Fix wrong deletion of object.
+		Preconditions: &metav1.Preconditions{&uid},
 	}
 
 	if release == nil || release.GetUID() != owner.UID {
@@ -196,7 +199,11 @@ func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Obj
 		// Delete the resource if its target release is not exist.
 		err = client.Delete(accessor.GetName(), options)
 		if err != nil {
-			glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
+			if errors.IsNotFound(err) {
+				glog.Errorf("Can't delete resource %s/%s: %s was deleted", accessor.GetNamespace(), accessor.GetName(), accessor.GetUID())
+			} else {
+				glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
+			}
 			return
 		}
 		glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
@@ -254,6 +261,9 @@ func (gc *GarbageCollector) ignore(gvk schema.GroupVersionKind) bool {
 
 // isAvailable checks if release is available.
 func (gc *GarbageCollector) isAvailable(release *releaseapi.Release) bool {
+	if release == nil {
+		return false
+	}
 	conditionsLen := len(release.Status.Conditions)
 	return conditionsLen > 0 && release.Status.Conditions[conditionsLen-1].Type == releaseapi.ReleaseAvailable
 }
