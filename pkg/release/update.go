@@ -52,6 +52,15 @@ func (rc *releaseContext) updateRelease(backend storage.ReleaseStorage, release 
 	})
 	if err != nil {
 		glog.Errorf("Failed to update resources for release %s/%s: %v", release.Namespace, release.Name, err)
+		glog.Infof("Recover resources for release %s/%s", release.Namespace, release.Name)
+		// Clear Resources
+		if err := rc.client.Update(release.Namespace, resources, originalManifests, kube.UpdateOptions{
+			OwnerReferences: referencesForRelease(release),
+			Modifier:        rc.fix,
+			// Don't need to ignore some resources here.
+		}); err != nil {
+			glog.Infof("Failed to recover resources for release %s/%s: %v", release.Namespace, release.Name, err)
+		}
 		return recordError(backend, err)
 	}
 	// Record success status
