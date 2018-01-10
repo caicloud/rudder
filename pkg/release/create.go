@@ -36,6 +36,14 @@ func (rc *releaseContext) createRelease(backend storage.ReleaseStorage, release 
 	})
 	if err != nil {
 		glog.Errorf("Failed to create resources for release %s/%s: %v", release.Namespace, release.Name, err)
+		glog.Infof("Clear resources for release %s/%s", release.Namespace, release.Name)
+		// Clear Resources
+		if err := rc.client.Delete(release.Namespace, resources, kube.DeleteOptions{
+			OwnerReferences: referencesForRelease(release),
+			// Don't need to ignore some resources here.
+		}); err != nil {
+			glog.Infof("Failed to clear resources for release %s/%s: %v", release.Namespace, release.Name, err)
+		}
 		return recordError(backend, err)
 	}
 	// Record success status
