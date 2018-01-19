@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/release-controller/pkg/kube"
@@ -10,6 +11,7 @@ import (
 	"github.com/caicloud/release-controller/pkg/storage"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type ReleaseAction string
@@ -40,50 +42,74 @@ func NewReleaseHandler(render render.Render, client kube.Client, ignored []schem
 func (rc *releaseContext) handle(ctx context.Context, backend storage.ReleaseStorage, getter Getter) {
 	glog.V(2).Infof("Start handler: %s", getter.Key())
 
-	var release *releaseapi.Release
+	// Retry queue.
+	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+	// target only has single read and single write thread. So don't need a lock here.
+	// target never is nil.
+	var target *releaseapi.Release
+	go func() {
+		for {
+			_, shutdown := queue.Get()
+			if shutdown {
+				return
+			}
+			// In the past, call handleRelease to judge and select an handler for release.
+			// Now just apply the release.
+			if err := rc.applyRelease(backend, target); err != nil {
+				// Something is wrong. Retry it with rate limit.
+				queue.AddRateLimited(target.Name)
+				glog.Errorf("Can't apply release %s/%s: %v", target.Namespace, target.Name, err)
+			} else {
+				glog.V(4).Infof("Successfully handled release: %s/%s", target.Namespace, target.Name)
+				// Everything is ok. Save target.
+				queue.Forget(target.Name)
+			}
+			queue.Done(target.Name)
+		}
+	}()
 FOR:
 	for {
 		select {
 		case _ = <-ctx.Done():
 			break FOR
-		case target := <-getter.Get():
-			// create/rollback/update resources
-			action, err := rc.judge(backend, release, target)
-			if err != nil {
-				// TODO(kdada): Re-enqueue the obj and handle it at appropriate time
-				glog.V(4).Infof("Can't judge an action for release: %+v", target)
-				glog.Errorf("Can't judge an action for release: %v", err)
-				continue
-			}
-			release = target
-			switch action {
-			case ReleaseCreate:
-				// Create
-				err = rc.createRelease(backend, release)
-			case ReleaseRollback:
-				// Rollback
-				err = rc.rollbackRelease(backend, release)
-			case ReleaseUpdate:
-				// Update
-				err = rc.updateRelease(backend, release)
-			}
-			if err != nil {
-				// TODO(kdada): Re-enqueue the obj and handle it at appropriate time
-				glog.Errorf("Can't do action for %s/%s: %v", release.Namespace, release.Name, err)
-				continue
+		case rel := <-getter.Get():
+			if !(target != nil && rel.Spec.RollbackTo == nil &&
+				target.Spec.Config == rel.Spec.Config &&
+				reflect.DeepEqual(target.Spec.Template, rel.Spec.Template)) {
+				// Config was changed. Add it to queue.
+				target = rel
+				queue.Forget(target.Name)
+				queue.Add(target.Name)
 			}
 		}
 	}
-	if release == nil {
-		glog.Errorf("No available release to clean")
-	} else {
-		// Delete
-		if err := rc.deleteRelease(backend, release); err != nil {
-			// TODO(kdada): Re-enqueue the obj and handle it at appropriate time
-			glog.Errorf("Can't delete release %s/%s: %v", release.Namespace, release.Name, err)
-		}
-	}
+	queue.ShutDown()
+	// Delete release resources.
+	// if err := rc.deleteRelease(backend, target); err != nil {
+	//     glog.Errorf("Can't delete release %s/%s: %v", target.Namespace, target.Name, err)
+	// }
+
 	glog.V(2).Infof("Stopped handler: %s", getter.Key())
+}
+
+func (rc *releaseContext) handleRelease(backend storage.ReleaseStorage, origin, target *releaseapi.Release) error {
+	// create/rollback/update resources
+	action, err := rc.judge(backend, origin, target)
+	if err != nil {
+		return err
+	}
+	switch action {
+	case ReleaseCreate:
+		// Create
+		return rc.createRelease(backend, target)
+	case ReleaseRollback:
+		// Rollback
+		return rc.rollbackRelease(backend, target)
+	case ReleaseUpdate:
+		// Update
+		return rc.updateRelease(backend, target)
+	}
+	return nil
 }
 
 func (rc *releaseContext) judge(backend storage.ReleaseStorage, oldOne *releaseapi.Release, newOne *releaseapi.Release) (ReleaseAction, error) {

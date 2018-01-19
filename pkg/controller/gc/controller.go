@@ -1,10 +1,9 @@
 package gc
 
 import (
+	"sync"
 	"time"
 
-	informerrelease "github.com/caicloud/clientset/informers/release/v1alpha1"
-	listerrelease "github.com/caicloud/clientset/listers/release/v1alpha1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/release-controller/pkg/kube"
 	"github.com/caicloud/release-controller/pkg/render"
@@ -14,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -26,6 +26,121 @@ var gvkRelease = releaseapi.SchemeGroupVersion.WithKind("Release")
 // Kind for GrayRelease
 var gvkReleaseHistory = releaseapi.SchemeGroupVersion.WithKind("ReleaseHistory")
 
+type resource struct {
+	gvk       schema.GroupVersionKind
+	namespace string
+	name      string
+	uid       types.UID
+	object    runtime.Object
+}
+
+type release struct {
+	namespace string
+	name      string
+	uid       types.UID
+	// resources is a map of resource uids <-> resources.
+	resources map[types.UID]*resource
+}
+
+// resources is a map of release uids <-> release resources.
+type releaseResources struct {
+	lock     sync.RWMutex
+	releases map[types.UID]*release
+	ignored  map[schema.GroupVersionKind]bool
+}
+
+func newReleaseResources(ignored []schema.GroupVersionKind) *releaseResources {
+	r := &releaseResources{
+		releases: make(map[types.UID]*release),
+		ignored:  make(map[schema.GroupVersionKind]bool),
+	}
+	for _, gvk := range ignored {
+		r.ignored[gvk] = true
+	}
+	return r
+}
+
+func (r *releaseResources) resources(release *releaseapi.Release) []*resource {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	rs, ok := r.releases[release.UID]
+	if !ok {
+		return nil
+	}
+	resources := make([]*resource, 0, len(rs.resources))
+	for _, r := range rs.resources {
+		resources = append(resources, r)
+	}
+	return resources
+}
+
+func (r *releaseResources) set(gvk schema.GroupVersionKind, obj runtime.Object) {
+	if r.ignored[gvk] {
+		return
+	}
+	if accessor, ok := obj.(metav1.ObjectMetaAccessor); ok {
+		meta := accessor.GetObjectMeta()
+		owners := meta.GetOwnerReferences()
+		if len(owners) <= 0 || len(owners) >= 2 {
+			// If the resource have no owner reference or have two or more references,
+			// we can't handle it.
+			// Even if the resource have a reference to a release, we leave it to the
+			// other owners.
+			// We can call the behavior as reference counter.
+			return
+		}
+		owner := owners[0]
+		if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
+			// If the owner is not release, we don't need handle it.
+			return
+		}
+
+		r.lock.Lock()
+		defer r.lock.Unlock()
+		rs, ok := r.releases[owner.UID]
+		if !ok {
+			rs = &release{
+				namespace: meta.GetNamespace(),
+				name:      owner.Name,
+				uid:       owner.UID,
+				resources: map[types.UID]*resource{},
+			}
+		}
+		rs.resources[meta.GetUID()] = &resource{
+			gvk:       gvk,
+			namespace: meta.GetNamespace(),
+			name:      meta.GetName(),
+			uid:       meta.GetUID(),
+			object:    obj,
+		}
+		r.releases[owner.UID] = rs
+	}
+}
+
+func (r *releaseResources) remove(gvk schema.GroupVersionKind, obj runtime.Object) {
+	if accessor, ok := obj.(metav1.ObjectMetaAccessor); ok {
+		meta := accessor.GetObjectMeta()
+		owners := meta.GetOwnerReferences()
+		if len(owners) <= 0 || len(owners) >= 2 {
+			return
+		}
+		owner := owners[0]
+		if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
+			return
+		}
+		r.lock.Lock()
+		defer r.lock.Unlock()
+		rs, ok := r.releases[owner.UID]
+		if !ok {
+			return
+		}
+		delete(rs.resources, meta.GetUID())
+		if len(rs.resources) == 0 {
+			delete(r.releases, rs.uid)
+		}
+	}
+}
+
 // GarbageCollector collects garbage release histories
 // and corresponding resources.
 type GarbageCollector struct {
@@ -33,10 +148,13 @@ type GarbageCollector struct {
 	clients       kube.ClientPool
 	codec         kube.Codec
 	store         store.IntegrationStore
-	releaseLister listerrelease.ReleaseLister
+	releaseLister cache.GenericLister
+	resources     *releaseResources
 	synced        []cache.InformerSynced
 	// ignored indicates which resources should be ignored
 	ignored []schema.GroupVersionKind
+	workers int32
+	working int32
 }
 
 // NewGarbageCollector creates a garbage collector.
@@ -44,47 +162,61 @@ func NewGarbageCollector(
 	clients kube.ClientPool,
 	codec kube.Codec,
 	store store.IntegrationStore,
-	releaseInformer informerrelease.ReleaseInformer,
 	targets []schema.GroupVersionKind,
 	ignored []schema.GroupVersionKind,
 ) (*GarbageCollector, error) {
 	gc := &GarbageCollector{
-		clients:       clients,
-		codec:         codec,
-		store:         store,
-		queue:         workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		releaseLister: releaseInformer.Lister(),
-		synced:        []cache.InformerSynced{releaseInformer.Informer().HasSynced},
-		ignored:       ignored,
+		clients:   clients,
+		codec:     codec,
+		store:     store,
+		resources: newReleaseResources(ignored),
+		queue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		synced:    []cache.InformerSynced{},
+		ignored:   ignored,
 	}
+	releaseInformer, err := store.InformerFor(gvkRelease)
+	if err != nil {
+		return nil, err
+	}
+	gc.releaseLister = releaseInformer.Lister()
 	for _, target := range targets {
 		gi, err := store.InformerFor(target)
 		if err != nil {
 			return nil, err
 		}
-		gc.synced = append(gc.synced, gi.Informer().HasSynced)
-		gi.Informer().AddEventHandler(&resourceEventHandler{target, gc.queue})
+		if target == gvkRelease {
+			// Release
+
+			gi.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+				AddFunc: func(newObj interface{}) {
+					gc.enqueue(newObj)
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					gc.enqueue(newObj)
+				},
+				DeleteFunc: func(obj interface{}) {
+					gc.enqueue(obj)
+				},
+			})
+			continue
+		}
+		gi.Informer().AddEventHandler(&resourceEventHandler{target, gc.queue, gc.resources})
 	}
 	return gc, nil
 }
 
-// binding keeps the relationship between  kind and objcet.
-type binding struct {
-	gvk    schema.GroupVersionKind
-	object runtime.Object
-}
-
 // resourceEventHandler is a handler implements cache.ResourceEventHandler.
 type resourceEventHandler struct {
-	gvk   schema.GroupVersionKind
-	queue workqueue.RateLimitingInterface
+	gvk       schema.GroupVersionKind
+	queue     workqueue.RateLimitingInterface
+	resources *releaseResources
 }
 
 // OnAdd enqueues newObj.
 func (rh *resourceEventHandler) OnAdd(newObj interface{}) {
 	obj, ok := newObj.(runtime.Object)
 	if ok {
-		rh.queue.Add(&binding{rh.gvk, obj})
+		rh.resources.set(rh.gvk, obj)
 	}
 }
 
@@ -94,12 +226,32 @@ func (rh *resourceEventHandler) OnUpdate(oldObj, newObj interface{}) {
 }
 
 // OnDelete is useless, we only need to handle living beings.
-func (rh *resourceEventHandler) OnDelete(obj interface{}) {}
+func (rh *resourceEventHandler) OnDelete(obj interface{}) {
+	if d, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		if o, ok := d.Obj.(runtime.Object); ok {
+			rh.resources.remove(rh.gvk, o)
+		}
+		return
+	}
+	if o, ok := obj.(runtime.Object); ok {
+		rh.resources.remove(rh.gvk, o)
+	}
+}
+
+// enqueue only can enqueue releases. Other types are not allowed.
+func (gc *GarbageCollector) enqueue(obj interface{}) {
+	if d, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		gc.enqueue(d.Obj)
+		return
+	}
+	gc.queue.Add(obj)
+}
 
 // Run starts workers to handle resource events.
 func (gc *GarbageCollector) Run(workers int32, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	glog.Info("Running GarbageCollector")
+	gc.workers += workers
 
 	if !cache.WaitForCacheSync(stopCh, gc.synced...) {
 		glog.Errorf("Can't sync cache")
@@ -112,8 +264,42 @@ func (gc *GarbageCollector) Run(workers int32, stopCh <-chan struct{}) {
 		go wait.Until(gc.worker, time.Second, stopCh)
 	}
 
+	go gc.resync()
+
 	<-stopCh
 	glog.Info("Shutting down GarbageCollector")
+}
+
+// resync syncs all releases if there is nothing in queue.
+func (gc *GarbageCollector) resync() {
+	for {
+		fakeReleases := make([]*releaseapi.Release, 0, len(gc.resources.releases))
+		for _, r := range gc.resources.releases {
+			rel := &releaseapi.Release{}
+			rel.Namespace = r.namespace
+			rel.Name = r.name
+			rel.UID = r.uid
+			fakeReleases = append(fakeReleases, rel)
+		}
+		synced := 0
+		for {
+			resyncCount := gc.workers - gc.working
+			if resyncCount > 0 {
+				limit := synced + int(resyncCount)
+				for ; synced < len(fakeReleases) && synced < limit; synced++ {
+					rel := fakeReleases[synced]
+					gc.queue.Add(rel)
+				}
+			}
+			if synced >= len(fakeReleases) {
+				break
+			}
+			// Check every second.
+			time.Sleep(time.Second)
+		}
+		// Check every second.
+		time.Sleep(time.Second)
+	}
 }
 
 // worker only guarantee the real worker is alive.
@@ -130,119 +316,197 @@ func (gc *GarbageCollector) processNextWorkItem() bool {
 		glog.Error("Unexpected quit of GarbageCollector resource queue")
 		return false
 	}
+	gc.working++
+	defer func() { gc.working-- }()
+
 	defer gc.queue.Done(obj)
-	binding, ok := obj.(*binding)
+	release, ok := obj.(*releaseapi.Release)
 	if !ok {
-		glog.Error("Unexpected binding of resource. May serious defect occur.")
+		glog.Error("Unexpected release. May serious defect occur.")
 		return false
 	}
-	gc.collect(binding.gvk, binding.object)
+	if err := gc.collect(release); err != nil {
+		gc.queue.AddRateLimited(obj)
+	} else {
+		gc.queue.Forget(obj)
+	}
 	return true
 }
 
-// collect handles existent resources. So it doesn't handle deletion events.
-func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Object) {
-	if gc.ignore(gvk) {
-		return
-	}
-	accessor, err := gc.codec.AccessorForObject(obj)
-	if err != nil {
-		glog.Errorf("Can't find out the accessor for resource: %v", err)
-		return
-	}
-	owners := accessor.GetOwnerReferences()
-	if len(owners) <= 0 || len(owners) >= 2 {
-		// If the resource have no owner reference or have two or more references,
-		// we can't handle it.
-		// Even if the resource have a reference to a release, we leave it to the
-		// other owners.
-		// We can call the behavior as reference counter.
-		return
-	}
-	owner := owners[0]
-	if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
-		// If the owner is not release, we don't need handle it.
-		return
-	}
-
-	release, err := gc.releaseLister.Releases(accessor.GetNamespace()).Get(owner.Name)
-	if err != nil && !errors.IsNotFound(err) {
-		glog.Errorf("Can't find release %s refered by resource %s/%s: %v", owner.Name, accessor.GetNamespace(), accessor.GetName(), err)
-		return
-	}
-
-	client, err := gc.clients.ClientFor(gvk, accessor.GetNamespace())
-	if err != nil {
-		glog.Errorf("Can't get a client for resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
-		return
-	}
-
-	// A resource which conforms to one of following rules will be deleted:
-	// 1. Target release is nonexistent (release history only can trigger the rule).
-	// 2. The release is available and the resource is not in the manifest of release.
-
-	policy := metav1.DeletePropagationBackground
-	uid := accessor.GetUID()
-	options := &metav1.DeleteOptions{
-		PropagationPolicy: &policy,
-		// Fix wrong deletion of object.
-		Preconditions: &metav1.Preconditions{&uid},
-	}
-
-	if release == nil || release.GetUID() != owner.UID {
-		// Log the release info.
-		if release != nil {
-			glog.V(4).Infof("%+v", release)
-		}
-		glog.V(4).Infof("%+v", obj)
-
-		// Delete the resource if its target release is not exist.
-		err = client.Delete(accessor.GetName(), options)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				glog.Errorf("Can't delete resource %s/%s: %s was deleted", accessor.GetNamespace(), accessor.GetName(), accessor.GetUID())
-			} else {
-				glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
-			}
-			return
-		}
-		glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
-		return
-	}
-	if gvk == gvkReleaseHistory {
-		// Ignore release history
-		return
-	}
-
-	// Check whether the release is available.
-	if !gc.isAvailable(release) {
-		return
-	}
-
-	resources := render.SplitManifest(release.Status.Manifest)
-	objs, accessors, err := gc.codec.AccessorsForResources(resources)
-	if err != nil && !errors.IsNotFound(err) {
-		glog.Errorf("Can't decode manifest of release %s/%s: %v", release.Namespace, release.Name, err)
-		return
-	}
-	// Find resource
-	found := false
-	for i, obj := range objs {
-		if obj.GetObjectKind().GroupVersionKind() == gvk && accessor.GetName() == accessors[i].GetName() {
-			found = true
-			break
-		}
-	}
-	if !found {
-		err = client.Delete(accessor.GetName(), options)
-		if err != nil && !errors.IsNotFound(err) {
-			glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
-			return
-		}
-		glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
-		return
-	}
+func keyForResource(gvk schema.GroupVersionKind, name string) string {
+	return gvk.String() + ":" + name
 }
+
+// collect handles existent resources. So it doesn't handle deletion events.
+func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
+	// The parameter release may be a fake release.
+	// For safety, only use its Namespace, Name and UID.
+	rel, err := gc.releaseLister.ByNamespace(release.Namespace).Get(release.Name)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	desired := map[string]bool{}
+	releaseAlived := false
+	if err == nil {
+		current, err := gc.codec.AccessorForObject(rel)
+		if err != nil {
+			return err
+		}
+		if release.UID == current.GetUID() {
+			release = rel.(*releaseapi.Release)
+			resources := render.SplitManifest(release.Status.Manifest)
+			objs, accessors, err := gc.codec.AccessorsForResources(resources)
+			if err != nil {
+				return err
+			}
+			for i, obj := range objs {
+				desired[keyForResource(obj.GetObjectKind().GroupVersionKind(), accessors[i].GetName())] = true
+			}
+			releaseAlived = true
+		}
+	}
+
+	resources := gc.resources.resources(release)
+	for _, res := range resources {
+		switch {
+		case res.gvk == gvkReleaseHistory:
+			// Check history
+			if releaseAlived {
+				continue
+			}
+			fallthrough
+		case !desired[keyForResource(res.gvk, res.name)]:
+			// Delete resource
+			client, err := gc.clients.ClientFor(res.gvk, res.namespace)
+			if err != nil {
+				glog.Errorf("Can't get a client for resource %s/%s: %v", res.namespace, res.name, err)
+				return err
+			}
+			policy := metav1.DeletePropagationBackground
+			options := &metav1.DeleteOptions{
+				PropagationPolicy: &policy,
+				Preconditions:     &metav1.Preconditions{&res.uid},
+			}
+			err = client.Delete(res.name, options)
+			if err != nil && !errors.IsNotFound(err) {
+				glog.Errorf("Can't delete resource %s/%s[%s]: %v", res.namespace, res.name, res.uid, err)
+				return err
+			}
+			gc.resources.remove(res.gvk, res.object)
+			glog.V(2).Infof("Delete resource %s %s/%s[%s] successfully", res.gvk.Kind, res.namespace, res.name, res.uid)
+		}
+	}
+	return nil
+}
+
+// collect handles existent resources. So it doesn't handle deletion events.
+// func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Object) {
+//     if gc.ignore(gvk) {
+//         return
+//     }
+//     accessor, err := gc.codec.AccessorForObject(obj)
+//     if err != nil {
+//         glog.Errorf("Can't find out the accessor for resource: %v", err)
+//         return
+//     }
+//     owners := accessor.GetOwnerReferences()
+//     if len(owners) <= 0 || len(owners) >= 2 {
+//         // If the resource have no owner reference or have two or more references,
+//         // we can't handle it.
+//         // Even if the resource have a reference to a release, we leave it to the
+//         // other owners.
+//         // We can call the behavior as reference counter.
+//         return
+//     }
+//     owner := owners[0]
+//     if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
+//         // If the owner is not release, we don't need handle it.
+//         return
+//     }
+//
+//     releaseObj, err := gc.releaseLister.ByNamespace(accessor.GetNamespace()).Get(owner.Name)
+//     if err != nil && !errors.IsNotFound(err) {
+//         glog.Errorf("Can't find release %s refered by resource %s/%s: %v", owner.Name, accessor.GetNamespace(), accessor.GetName(), err)
+//         return
+//     }
+//     var release *releaseapi.Release
+//     if obj != nil {
+//         release = releaseObj.(*releaseapi.Release)
+//     }
+//
+//     client, err := gc.clients.ClientFor(gvk, accessor.GetNamespace())
+//     if err != nil {
+//         glog.Errorf("Can't get a client for resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
+//         return
+//     }
+//
+//     // A resource which conforms to one of following rules will be deleted:
+//     // 1. Target release is nonexistent (release history only can trigger the rule).
+//     // 2. The release is available and the resource is not in the manifest of release.
+//
+//     policy := metav1.DeletePropagationBackground
+//     uid := accessor.GetUID()
+//     options := &metav1.DeleteOptions{
+//         PropagationPolicy: &policy,
+//         // Fix wrong deletion of object.
+//         Preconditions: &metav1.Preconditions{&uid},
+//     }
+//
+//     if release == nil || release.GetUID() != owner.UID {
+//         // Log the release info.
+//         if release != nil {
+//             glog.V(4).Infof("%+v", release)
+//         }
+//         glog.V(4).Infof("%+v", obj)
+//
+//         // Delete the resource if its target release is not exist.
+//         err = client.Delete(accessor.GetName(), options)
+//         if err != nil {
+//             if errors.IsNotFound(err) {
+//                 glog.Errorf("Can't delete resource %s/%s: %s was deleted", accessor.GetNamespace(), accessor.GetName(), accessor.GetUID())
+//             } else {
+//                 glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
+//             }
+//             return
+//         }
+//         glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
+//         return
+//     }
+//     if gvk == gvkReleaseHistory {
+//         // Ignore release history
+//         return
+//     }
+//
+//     // Check whether the release is available.
+//     if !gc.isAvailable(release) {
+//         return
+//     }
+//
+//     resources := render.SplitManifest(release.Status.Manifest)
+//     objs, accessors, err := gc.codec.AccessorsForResources(resources)
+//     if err != nil && !errors.IsNotFound(err) {
+//         glog.Errorf("Can't decode manifest of release %s/%s: %v", release.Namespace, release.Name, err)
+//         return
+//     }
+//     // Find resource
+//     found := false
+//     for i, obj := range objs {
+//         if obj.GetObjectKind().GroupVersionKind() == gvk && accessor.GetName() == accessors[i].GetName() {
+//             found = true
+//             break
+//         }
+//     }
+//     if !found {
+//         err = client.Delete(accessor.GetName(), options)
+//         if err != nil && !errors.IsNotFound(err) {
+//             glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
+//             return
+//         }
+//         glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
+//         return
+//     }
+// }
 
 // ignore checks if an object should be ignored.
 func (gc *GarbageCollector) ignore(gvk schema.GroupVersionKind) bool {

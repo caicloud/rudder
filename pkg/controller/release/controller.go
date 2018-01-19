@@ -10,6 +10,7 @@ import (
 	"github.com/caicloud/release-controller/pkg/release"
 	"github.com/caicloud/release-controller/pkg/render"
 	"github.com/caicloud/release-controller/pkg/storage"
+	"github.com/caicloud/release-controller/pkg/store"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,16 +32,17 @@ type ReleaseController struct {
 func NewReleaseController(
 	clients kube.ClientPool,
 	codec kube.Codec,
+	store store.IntegrationStore,
 	releaseClient releasev1alpha1.ReleaseV1alpha1Interface,
 	releaseInformer informerrelease.ReleaseInformer,
 	ignored []schema.GroupVersionKind,
 ) (*ReleaseController, error) {
-	client, err := kube.NewClient(clients, codec)
+	client, err := kube.NewClientWithCacheLayer(clients, codec, store)
 	if err != nil {
 		return nil, err
 	}
 	handler := release.NewReleaseHandler(render.NewRender(), client, ignored)
-	backend := storage.NewReleaseBackend(releaseClient)
+	backend := storage.NewReleaseBackendWithCacheLayer(releaseClient, store)
 	rc := &ReleaseController{
 		queue:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		manager:          release.NewReleaseManager(backend, handler),

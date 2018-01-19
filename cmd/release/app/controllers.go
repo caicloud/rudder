@@ -52,6 +52,7 @@ func startReleaseController(ctx ControllerContext) error {
 	releaseController, err := release.NewReleaseController(
 		ctx.ClientPool,
 		ctx.Codec,
+		ctx.InformerStore,
 		ctx.KubeClient.ReleaseV1alpha1(),
 		ctx.InformerFactory.Release().V1alpha1().Releases(),
 		ctx.IgnoredKinds,
@@ -82,7 +83,6 @@ func startGCController(ctx ControllerContext) error {
 		ctx.ClientPool,
 		ctx.Codec,
 		ctx.InformerStore,
-		ctx.InformerFactory.Release().V1alpha1().Releases(),
 		ctx.AvailableKinds,
 		ctx.IgnoredKinds,
 	)

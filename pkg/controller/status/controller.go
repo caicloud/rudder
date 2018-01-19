@@ -63,7 +63,7 @@ func NewStatusController(
 		queue:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		releases:         make(map[string]*releaseapi.Release),
 		store:            store,
-		backend:          storage.NewReleaseBackend(releaseClient),
+		backend:          storage.NewReleaseBackendWithCacheLayer(releaseClient, store),
 		releaseLister:    releaseInformer.Lister(),
 		releaseHasSynced: releaseInformer.Informer().HasSynced,
 		detectors:        detectors,
