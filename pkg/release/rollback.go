@@ -28,6 +28,8 @@ func (rc *releaseContext) rollbackRelease(backend storage.ReleaseStorage, releas
 	manifests := render.SplitManifest(h.Spec.Manifest)
 	err = rc.client.Update(release.Namespace, originalManifests, manifests, kube.UpdateOptions{
 		OwnerReferences: referencesForRelease(release),
+		Modifier:        rc.fix,
+		Filter:          rc.ignore,
 	})
 	if err != nil {
 		glog.Errorf("Failed to rollback resources for release %s/%s: %v", release.Namespace, release.Name, err)
