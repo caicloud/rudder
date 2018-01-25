@@ -11,7 +11,8 @@ type Applier func(current, desired runtime.Object) error
 
 var appliers = map[schema.GroupVersionKind]Applier{}
 
-func registerApplier(gvk schema.GroupVersionKind, applier Applier) {
+// RegisterApplier registers an applier for specific gvk.
+func RegisterApplier(gvk schema.GroupVersionKind, applier Applier) {
 	appliers[gvk] = applier
 }
 

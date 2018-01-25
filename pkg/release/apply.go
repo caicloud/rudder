@@ -21,7 +21,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		rel, err := backend.Rollback(release.Spec.RollbackTo.Version)
 		if err != nil {
 			glog.Errorf("Failed to rollback release %s/%s: %v", release.Namespace, release.Name, err)
-			return err
+			return recordError(backend, err)
 		}
 		manifests = render.SplitManifest(rel.Status.Manifest)
 	} else {
@@ -31,7 +31,8 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 			var err error
 			history, err = backend.History(release.Status.Version)
 			if err != nil && !errors.IsNotFound(err) {
-				return err
+				glog.Errorf("Failed to get release hisory for %s/%s: %v", release.Namespace, release.Name, err)
+				return recordError(backend, err)
 			}
 		}
 		if history != nil &&
@@ -45,7 +46,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 			histories, err := backend.Histories()
 			if err != nil {
 				glog.Errorf("Failed to get histories for release %s/%s: %v", release.Namespace, release.Name, err)
-				return err
+				return recordError(backend, err)
 			}
 			if len(histories) > 0 {
 				release.Status.Version = histories[0].Spec.Version + 1
@@ -63,11 +64,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 			if err != nil {
 				// Record error status
 				glog.Errorf("Failed to render release %s/%s: %v", release.Namespace, release.Name, err)
-				_, e := backend.FlushConditions(storage.ConditionFailure(err.Error()))
-				if e != nil {
-					return e
-				}
-				return err
+				return recordError(backend, err)
 			}
 			manifests = carrier.Resources()
 			release.Status.Manifest = render.MergeResources(manifests)
@@ -75,7 +72,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 			_, err = backend.Update(release)
 			if err != nil {
 				glog.Errorf("Failed to update release %s/%s: %v", release.Namespace, release.Name, err)
-				return err
+				return recordError(backend, err)
 			}
 		}
 	}
@@ -85,7 +82,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		// Modifier:        rc.apply,
 	}); err != nil {
 		glog.Infof("Failed to apply resources for release %s/%s: %v", release.Namespace, release.Name, err)
-		return err
+		return recordError(backend, err)
 	}
 	_, err := backend.FlushConditions(storage.ConditionAvailable())
 	if err != nil {
