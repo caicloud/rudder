@@ -21,9 +21,11 @@ func StatefulSetAssistant(store store.IntegrationStore, obj runtime.Object) (sta
 	if ss.Spec.Replicas != nil {
 		desired = *ss.Spec.Replicas
 	}
-	current := ss.Status.Replicas
+	replicas := ss.Status.Replicas
+	current := ss.Status.CurrentReplicas
+	ready := ss.Status.ReadyReplicas
 	switch {
-	case desired == current:
+	case desired == replicas && desired == current && desired == ready:
 		// TODO(kdada): Check wrong pods for more precise verdict
 		return status.Available, nil
 	default:
