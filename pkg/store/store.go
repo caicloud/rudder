@@ -152,7 +152,7 @@ func newCacheLayer(lister cache.GenericLister, gr schema.GroupResource, ttl time
 		}
 		// It should not come here.
 		panic("Invalid cache object")
-	}, cache.Indexers{"namespace": func(obj interface{}) ([]string, error) {
+	}, cache.Indexers{cache.NamespaceIndex: func(obj interface{}) ([]string, error) {
 		switch o := obj.(type) {
 		case *cacheObject:
 			return []string{o.namespace}, nil
@@ -172,7 +172,11 @@ func newCacheLayer(lister cache.GenericLister, gr schema.GroupResource, ttl time
 }
 
 func (c *cacheLayer) get(object runtime.Object) (*cacheObject, bool) {
-	meta := object.(metav1.ObjectMetaAccessor).GetObjectMeta()
+	accessor, ok := object.(metav1.ObjectMetaAccessor)
+	if !ok {
+		return nil, false
+	}
+	meta := accessor.GetObjectMeta()
 	var co runtime.Object
 	var err error
 	if meta.GetNamespace() == "" {
@@ -233,6 +237,7 @@ func (c *cacheLayer) Get(name string) (runtime.Object, error) {
 	return c.getByKey(name, c.lister, c.indexLister)
 }
 
+// listBySelector lists obejects by selector. All valid objects in cache lister would be added into results.
 func (c *cacheLayer) listBySelector(selector labels.Selector, lister, cacheLister cache.GenericNamespaceLister) ([]runtime.Object, error) {
 	currentObjs, err := lister.List(selector)
 	if err != nil {
@@ -245,17 +250,19 @@ func (c *cacheLayer) listBySelector(selector labels.Selector, lister, cacheListe
 	if len(cacheObjs) == 0 {
 		return currentObjs, err
 	}
+	// Get all cached objects.
 	cacheObjsMap := map[string]*cacheObject{}
 	for _, obj := range cacheObjs {
 		co := obj.(*cacheObject)
-		cacheObjsMap[co.namespace+"/"+co.name] = co
+		cacheObjsMap[keyForNamespaceAndName(co.namespace, co.name)] = co
 	}
 	count := 0
 	for _, obj := range currentObjs {
 		meta := obj.(metav1.ObjectMetaAccessor).GetObjectMeta()
-		key := meta.GetNamespace() + "/" + meta.GetName()
+		key := keyForNamespaceAndName(meta.GetNamespace(), meta.GetName())
 		co, ok := cacheObjsMap[key]
 		if ok {
+			// Select latest one.
 			if result := c.selectObject(obj, co); result != nil {
 				currentObjs[count] = result
 				count++
@@ -272,6 +279,7 @@ func (c *cacheLayer) listBySelector(selector labels.Selector, lister, cacheListe
 	return currentObjs, nil
 }
 
+// getByKey gets an object from listers by key.
 func (c *cacheLayer) getByKey(key string, lister, cacheLister cache.GenericNamespaceLister) (runtime.Object, error) {
 	obj, err := lister.Get(key)
 	if err != nil && !errors.IsNotFound(err) {
@@ -337,4 +345,8 @@ func (l *namespacedLister) List(selector labels.Selector) (ret []runtime.Object,
 // Get will attempt to retrieve assuming that name==key
 func (l *namespacedLister) Get(name string) (runtime.Object, error) {
 	return l.layer.getByKey(name, l.lister, l.indexLister)
+}
+
+func keyForNamespaceAndName(namespace, name string) string {
+	return namespace + "/" + name
 }

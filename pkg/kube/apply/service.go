@@ -24,6 +24,9 @@ func applyService(current, desired runtime.Object) error {
 			portsMap[port.Port] = port.NodePort
 		}
 		for i, port := range do.Spec.Ports {
+			// Node port should always between 1 and 65535.
+			// If Node port is 0, it means user want use a
+			// random port or be same as current service.
 			if port.NodePort <= 0 || port.NodePort > 65535 {
 				// Set desired service's node port.
 				do.Spec.Ports[i].NodePort = portsMap[port.Port]

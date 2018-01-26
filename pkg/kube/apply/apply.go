@@ -19,7 +19,7 @@ func RegisterApplier(gvk schema.GroupVersionKind, applier Applier) {
 // Apply fixes objects.
 func Apply(gvk schema.GroupVersionKind, current, desired runtime.Object) error {
 	if applier, ok := appliers[gvk]; ok {
-		applier(current, desired)
+		return applier(current, desired)
 	}
 	return nil
 }
