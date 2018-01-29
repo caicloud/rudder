@@ -6,9 +6,9 @@ import "github.com/caicloud/release-controller/pkg/status"
 func Register(umpire status.Umpire) {
 	umpire.Employ(gvkService, ServiceAssistant)
 	umpire.Employ(gvkDeployment, DeploymentAssistant)
-	umpire.Employ(gvkStatefulSet, ServiceAssistant)
-	umpire.Employ(gvkDaemonSet, ServiceAssistant)
-	umpire.Employ(gvkJob, ServiceAssistant)
-	umpire.Employ(gvkCronJob, ServiceAssistant)
-	umpire.Employ(gvkPVC, ServiceAssistant)
+	umpire.Employ(gvkStatefulSet, StatefulSetAssistant)
+	umpire.Employ(gvkDaemonSet, DaemonSetAssistant)
+	umpire.Employ(gvkJob, JobAssistant)
+	umpire.Employ(gvkCronJob, CronJobAssistant)
+	umpire.Employ(gvkPVC, PVCAssistant)
 }

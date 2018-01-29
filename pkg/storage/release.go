@@ -8,11 +8,15 @@ import (
 
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+	"github.com/caicloud/release-controller/pkg/kube"
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const (
@@ -21,6 +25,11 @@ const (
 	LabelReleaseName = "release.caicloud.io/name"
 	// LabelReleaseVersion is the version of release history
 	LabelReleaseVersion = "release.caicloud.io/version"
+)
+
+var (
+	gvkRelease        = releaseapi.SchemeGroupVersion.WithKind("Release")
+	gvkReleaseHistory = releaseapi.SchemeGroupVersion.WithKind("ReleaseHistory")
 )
 
 // ReleaseBackend is a backend for releases and release histories.
@@ -57,6 +66,8 @@ type ReleaseHolderExpansion interface {
 	UpdateStatus(modifier func(status *releaseapi.ReleaseStatus)) (*releaseapi.Release, error)
 	// AddCondition adds a condition to running release.
 	AddCondition(condition releaseapi.ReleaseCondition) (*releaseapi.Release, error)
+	// FlushConditions flushes conditions to running release.
+	FlushConditions(condition ...releaseapi.ReleaseCondition) (*releaseapi.Release, error)
 }
 
 // ReleaseHistoryHolder contains methods for release histories
@@ -65,6 +76,14 @@ type ReleaseHistoryHolder interface {
 	History(version int32) (*releaseapi.ReleaseHistory, error)
 	// Histories returns all histories of release.
 	Histories() ([]releaseapi.ReleaseHistory, error)
+}
+
+// NewReleaseBackendWithCacheLayer creates a release backend.
+func NewReleaseBackendWithCacheLayer(client releasev1alpha1.ReleaseV1alpha1Interface, layers kube.CacheLayers) ReleaseBackend {
+	return &releaseBackend{
+		client: client,
+		layers: layers,
+	}
 }
 
 // NewReleaseBackend creates a release backend.
@@ -76,15 +95,21 @@ func NewReleaseBackend(client releasev1alpha1.ReleaseV1alpha1Interface) ReleaseB
 
 type releaseBackend struct {
 	client releasev1alpha1.ReleaseV1alpha1Interface
+	layers kube.CacheLayers
 }
 
 // ReleaseStorage returns a corresponding storage for the release.
 func (rb *releaseBackend) ReleaseStorage(release *releaseapi.Release) ReleaseStorage {
+	ins, err := scheme.Scheme.DeepCopy(release)
+	if err != nil {
+		panic(err)
+	}
 	return &releaseStorage{
 		name:                 release.Name,
-		release:              release,
+		release:              ins.(*releaseapi.Release),
 		releaseClient:        rb.client.Releases(release.Namespace),
 		releaseHistoryClient: rb.client.ReleaseHistories(release.Namespace),
+		layers:               rb.layers,
 	}
 }
 
@@ -93,41 +118,85 @@ type releaseStorage struct {
 	release              *releaseapi.Release
 	releaseClient        releasev1alpha1.ReleaseInterface
 	releaseHistoryClient releasev1alpha1.ReleaseHistoryInterface
+	layers               kube.CacheLayers
+}
+
+const (
+	actionCreated = "Created"
+	actionUpdated = "Updated"
+	actionDeleted = "Deleted"
+)
+
+func (rs *releaseStorage) withLayer(gvk schema.GroupVersionKind, obj runtime.Object, action string) error {
+	if rs.layers != nil {
+		layer, err := rs.layers.LayerFor(gvk)
+		if err != nil {
+			return err
+		}
+		switch action {
+		case actionCreated:
+			layer.Created(obj)
+		case actionUpdated:
+			layer.Updated(obj)
+		case actionDeleted:
+			layer.Deleted(obj)
+		}
+	}
+	return nil
 }
 
 // Release returns a cached release. It may be not a latest one.
 // Don't use the release to cover running release.
 func (rs *releaseStorage) Release() (*releaseapi.Release, error) {
+	if rs.layers != nil {
+		layer, err := rs.layers.LayerFor(gvkRelease)
+		if err != nil {
+			return nil, err
+		}
+		obj, err := layer.ByNamespace(rs.release.Namespace).Get(rs.release.Name)
+		if err != nil {
+			return nil, err
+		}
+		return obj.(*releaseapi.Release), nil
+	}
 	return rs.release, nil
+}
+
+// own checks if the history is belong to current release.
+func (rs *releaseStorage) own(history *releaseapi.ReleaseHistory) bool {
+	if len(history.OwnerReferences) != 1 {
+		return false
+	}
+	or := history.OwnerReferences[0]
+	return or.APIVersion == releaseapi.SchemeGroupVersion.String() &&
+		or.Kind == gvkRelease.Kind &&
+		or.Name == rs.release.Name &&
+		or.UID == rs.release.UID
 }
 
 // Update updates the release.
 func (rs *releaseStorage) Update(release *releaseapi.Release) (*releaseapi.Release, error) {
-	version := int32(1)
-	if release.Status.Version > 0 {
-		histories, err := rs.Histories()
+	history, err := rs.History(release.Status.Version)
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, err
+	}
+	if err != nil {
+		// Create history
+		history = constructReleaseHistory(release, release.Status.Version)
+		_, err := rs.releaseHistoryClient.Create(history)
 		if err != nil {
 			return nil, err
 		}
-		if len(histories) <= 0 {
-			version = 1
-		} else {
-			version = histories[0].Spec.Version + 1
+		if err := rs.withLayer(gvkReleaseHistory, history, actionCreated); err != nil {
+			return nil, err
 		}
 	}
-	// Create history
-	history := constructReleaseHistory(release, version)
-	_, err := rs.releaseHistoryClient.Create(history)
-	if err != nil {
-		return nil, err
-	}
-
 	// Update release
 	return rs.Patch(func(rel *releaseapi.Release) {
 		rel.Status.LastUpdateTime = metav1.Now()
 		rel.Status.Manifest = release.Status.Manifest
-		rel.Status.Version = version
-		rel.Status.Conditions = append(rel.Status.Conditions, ConditionAvailable())
+		rel.Status.Version = release.Status.Version
+		rel.Status.Conditions = []releaseapi.ReleaseCondition{ConditionUpdating()}
 	})
 }
 
@@ -137,9 +206,13 @@ func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*re
 	if err != nil {
 		return nil, err
 	}
-	modifier(rs.release)
-	shortenConditions(rs.release)
-	newOne, err := json.Marshal(rs.release)
+	ins, err := scheme.Scheme.DeepCopy(rs.release)
+	if err != nil {
+		return nil, err
+	}
+	target := ins.(*releaseapi.Release)
+	modifier(target)
+	newOne, err := json.Marshal(target)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +227,10 @@ func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*re
 	if err != nil {
 		return nil, err
 	}
+	if err := rs.withLayer(gvkRelease, rel, actionUpdated); err != nil {
+		return nil, err
+	}
+
 	// Keep release status fresh
 	rs.release = rel
 	return rs.release, nil
@@ -162,8 +239,12 @@ func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*re
 // Rollback rollbacks running release to specified version.
 func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 	history, err := rs.History(version)
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
+	}
+	if err != nil {
+		// Record condition.
+		return rs.FlushConditions(ConditionFailure(err.Error()))
 	}
 	return rs.Patch(func(release *releaseapi.Release) {
 		release.Spec.Description = history.Spec.Description
@@ -173,7 +254,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 		release.Status.Version = history.Spec.Version
 		release.Status.LastUpdateTime = metav1.Now()
 		release.Status.Manifest = history.Spec.Manifest
-		release.Status.Conditions = append(release.Status.Conditions, ConditionAvailable())
+		release.Status.Conditions = []releaseapi.ReleaseCondition{ConditionRollbacking()}
 	})
 }
 
@@ -183,6 +264,11 @@ func (rs *releaseStorage) Delete() error {
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
+	if err := rs.withLayer(gvkRelease, rs.release, actionDeleted); err != nil {
+		return err
+	}
+
+	// Don't need to record deleted histories.
 	err = rs.releaseHistoryClient.DeleteCollection(nil, metav1.ListOptions{
 		LabelSelector: labels.Set{
 			LabelReleaseName: rs.name,
@@ -191,28 +277,76 @@ func (rs *releaseStorage) Delete() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 // History gets specified version of release.
-func (rs *releaseStorage) History(version int32) (*releaseapi.ReleaseHistory, error) {
-	return rs.releaseHistoryClient.Get(generateReleaseHistoryName(rs.name, version), metav1.GetOptions{})
-}
-
-// Histories returns all histories of release.
-func (rs *releaseStorage) Histories() ([]releaseapi.ReleaseHistory, error) {
-	histories, err := rs.releaseHistoryClient.List(metav1.ListOptions{
-		LabelSelector: labels.Set{
-			LabelReleaseName: rs.name,
-		}.String(),
-	})
+func (rs *releaseStorage) History(version int32) (history *releaseapi.ReleaseHistory, err error) {
+	if rs.layers != nil {
+		layer, err := rs.layers.LayerFor(gvkReleaseHistory)
+		if err != nil {
+			return nil, err
+		}
+		obj, err := layer.ByNamespace(rs.release.Namespace).Get(generateReleaseHistoryName(rs.name, version))
+		if err != nil {
+			return nil, err
+		}
+		history = obj.(*releaseapi.ReleaseHistory)
+	} else {
+		history, err = rs.releaseHistoryClient.Get(generateReleaseHistoryName(rs.name, version), metav1.GetOptions{})
+	}
 	if err != nil {
 		return nil, err
 	}
-	sort.Slice(histories.Items, func(i, j int) bool {
-		return histories.Items[i].Spec.Version > histories.Items[j].Spec.Version
+	if !rs.own(history) {
+		return nil, errors.NewNotFound(schema.GroupResource{
+			Group: gvkReleaseHistory.Group,
+		}, history.Name)
+	}
+	return history, nil
+}
+
+// Histories returns all histories of release.
+func (rs *releaseStorage) Histories() (results []releaseapi.ReleaseHistory, err error) {
+	if rs.layers != nil {
+		layer, err := rs.layers.LayerFor(gvkReleaseHistory)
+		if err != nil {
+			return nil, err
+		}
+		list, err := layer.ByNamespace(rs.release.Namespace).List(labels.Set{
+			LabelReleaseName: rs.name,
+		}.AsSelector())
+		if err != nil {
+			return nil, err
+		}
+		results = make([]releaseapi.ReleaseHistory, 0, len(list))
+		for _, obj := range list {
+			results = append(results, *obj.(*releaseapi.ReleaseHistory))
+		}
+	} else {
+		histories, err := rs.releaseHistoryClient.List(metav1.ListOptions{
+			LabelSelector: labels.Set{
+				LabelReleaseName: rs.name,
+			}.String(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		results = histories.Items
+	}
+	count := 0
+	for _, history := range results {
+		if rs.own(&history) {
+			results[count] = history
+			count++
+		}
+	}
+	results = results[:count]
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Spec.Version > results[j].Spec.Version
 	})
-	return histories.Items, nil
+	return results, nil
 }
 
 // UpdateStatus update the status of running release.
@@ -222,10 +356,17 @@ func (rs *releaseStorage) UpdateStatus(modifier func(status *releaseapi.ReleaseS
 	})
 }
 
-// AddCondition adds a condition to running release.
+// AddCondition adds a condition to running release. Deprecated, Use FlushConditions as instead.
 func (rs *releaseStorage) AddCondition(condition releaseapi.ReleaseCondition) (*releaseapi.Release, error) {
 	return rs.Patch(func(release *releaseapi.Release) {
 		release.Status.Conditions = append(release.Status.Conditions, condition)
+	})
+}
+
+// FlushConditions flushes conditions to running release.
+func (rs *releaseStorage) FlushConditions(conditions ...releaseapi.ReleaseCondition) (*releaseapi.Release, error) {
+	return rs.Patch(func(release *releaseapi.Release) {
+		release.Status.Conditions = conditions
 	})
 }
 

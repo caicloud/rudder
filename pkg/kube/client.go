@@ -4,17 +4,41 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/caicloud/release-controller/pkg/kube/apply"
+	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/client-go/tools/cache"
 )
+
+// CacheLayers Contains layers for all kinds.
+type CacheLayers interface {
+	// LayerFor get a layer for concrete kind.
+	LayerFor(gvk schema.GroupVersionKind) (CacheLayer, error)
+}
+
+// CacheLayer is a resource cache store.
+type CacheLayer interface {
+	// Created records an object is created.
+	Created(obj runtime.Object)
+	// Updated records an object is updated.
+	Updated(obj runtime.Object)
+	// Deleted records an object is deleted.
+	Deleted(obj runtime.Object)
+	// GenericLister is a cached lister to get objects.
+	cache.GenericLister
+}
 
 // Client implements CRUD methods for a group resources.
 type Client interface {
 	// Get gets the current object by resources.
 	Get(namespace string, resources []string, options GetOptions) ([]runtime.Object, error)
+	// Apply creates/updates all these resources.
+	Apply(namespace string, resources []string, options ApplyOptions) error
 	// Create creates all these resources.
 	Create(namespace string, resources []string, options CreateOptions) error
 	// Update updates all resources.
@@ -23,37 +47,59 @@ type Client interface {
 	Delete(namespace string, resources []string, options DeleteOptions) error
 }
 
-// NewClient creates a client for resources.
-func NewClient(pool ClientPool, codec Codec) (Client, error) {
+// NewClientWithCacheLayer creates a client for resources with cache layers. If layers is not
+// nil, the client gets/lists objects by layers preferentially.
+func NewClientWithCacheLayer(pool ClientPool, codec Codec, layers CacheLayers) (Client, error) {
 	client := &client{
-		pool:  pool,
-		codec: codec,
+		pool:   pool,
+		codec:  codec,
+		layers: layers,
 	}
 	return client, nil
 }
 
+// NewClient creates a client for resources.
+func NewClient(pool ClientPool, codec Codec) (Client, error) {
+	return NewClientWithCacheLayer(pool, codec, nil)
+}
+
 type client struct {
-	pool  ClientPool
-	codec Codec
+	pool   ClientPool
+	codec  Codec
+	layers CacheLayers
+}
+
+func (c *client) getObject(gvk schema.GroupVersionKind, namespace, name string) (runtime.Object, error) {
+	if c.layers != nil {
+		// Get object from cache.
+		layer, err := c.layers.LayerFor(gvk)
+		if err != nil {
+			return nil, err
+		}
+		return layer.ByNamespace(namespace).Get(name)
+	}
+	// Get object by client.
+	client, err := c.pool.ClientFor(gvk, namespace)
+	if err != nil {
+		return nil, err
+	}
+	return client.Get(name, metav1.GetOptions{})
 }
 
 // Get gets the current object by resources.
 func (c *client) Get(namespace string, resources []string, options GetOptions) ([]runtime.Object, error) {
-	objs, err := c.codec.ResourcesToObjects(resources)
+	objs, accessors, err := c.codec.AccessorsForResources(resources)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]runtime.Object, 0, len(objs))
-	for _, obj := range objs {
+	for i, obj := range objs {
 		accessor, err := c.codec.AccessorForObject(obj)
 		if err != nil {
 			return nil, err
 		}
-		client, err := c.pool.ClientFor(obj.GetObjectKind().GroupVersionKind(), namespace)
-		if err != nil {
-			return nil, err
-		}
-		object, err := client.Get(accessor.GetName(), metav1.GetOptions{})
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		object, err := c.getObject(gvk, namespace, accessor.GetName())
 		if err != nil {
 			if errors.IsNotFound(err) && options.IgnoreNonexistence {
 				// Ignore inexistent resource
@@ -61,11 +107,81 @@ func (c *client) Get(namespace string, resources []string, options GetOptions) (
 			}
 			return nil, err
 		}
-		if c.own(options.OwnerReferences, object) {
-			result = append(result, object)
+		if !c.own(options.OwnerReferences, object) {
+			// The object is not belong to current owner.
+			accessor := accessors[i]
+			return nil, fmt.Errorf("%s/%s(%s) exists but not belong to current owner",
+				namespace, accessor.GetName(), gvk.Kind)
 		}
+		result = append(result, object)
 	}
 	return result, nil
+}
+
+// Apply creates/updates all these resources.
+func (c *client) Apply(namespace string, resources []string, options ApplyOptions) error {
+	objs, err := c.objectsByOrder(resources, InstallOrder)
+	if err != nil {
+		return err
+	}
+	for _, obj := range objs {
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		accessor, err := c.codec.AccessorForObject(obj)
+		if err != nil {
+			return err
+		}
+		if options.OwnerReferences != nil {
+			accessor.SetOwnerReferences(append(accessor.GetOwnerReferences(), options.OwnerReferences...))
+		}
+		client, err := c.pool.ClientFor(gvk, namespace)
+		if err != nil {
+			return err
+		}
+		// Check whether the object exists.
+		existence, err := c.getObject(gvk, namespace, accessor.GetName())
+		if err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		if err != nil {
+			// Create
+			result, err := client.Create(obj)
+			if err != nil {
+				return err
+			}
+			if c.layers != nil {
+				// Record the result into cache.
+				layer, err := c.layers.LayerFor(gvk)
+				if err != nil {
+					return err
+				}
+				layer.Created(result)
+			}
+		} else {
+			// Update
+			if c.own(options.OwnerReferences, existence) {
+				apply.Apply(gvk, existence, obj)
+				result, err := client.Update(obj)
+				if err != nil {
+					return err
+				}
+				if c.layers != nil {
+					// Record the result into cache.
+					layer, err := c.layers.LayerFor(gvk)
+					if err != nil {
+						return err
+					}
+					layer.Updated(result)
+				}
+			} else {
+				glog.Errorf("%+v, %v", existence, err)
+				// Conflict
+				return fmt.Errorf("%s/%s(%s) is not belong to current owner %v",
+					namespace, accessor.GetName(),
+					gvk.Kind, options.OwnerReferences)
+			}
+		}
+	}
+	return nil
 }
 
 // Create creates all these resources.
@@ -75,16 +191,13 @@ func (c *client) Create(namespace string, resources []string, options CreateOpti
 		return err
 	}
 	for _, obj := range objs {
-		client, err := c.pool.ClientFor(obj.GetObjectKind().GroupVersionKind(), namespace)
-		if err != nil {
-			return err
-		}
 		accessor, err := c.codec.AccessorForObject(obj)
 		if err != nil {
 			return err
 		}
+		gvk := obj.GetObjectKind().GroupVersionKind()
 		// Check whether the object exists.
-		existence, err := client.Get(accessor.GetName(), metav1.GetOptions{})
+		existence, err := c.getObject(gvk, namespace, accessor.GetName())
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
@@ -96,9 +209,21 @@ func (c *client) Create(namespace string, resources []string, options CreateOpti
 		if options.OwnerReferences != nil {
 			accessor.SetOwnerReferences(append(accessor.GetOwnerReferences(), options.OwnerReferences...))
 		}
-		_, err = client.Create(obj)
+		client, err := c.pool.ClientFor(gvk, namespace)
 		if err != nil {
 			return err
+		}
+		result, err := client.Create(obj)
+		if err != nil {
+			return err
+		}
+		if c.layers != nil {
+			// Record the result into cache.
+			layer, err := c.layers.LayerFor(gvk)
+			if err != nil {
+				return err
+			}
+			layer.Created(result)
 		}
 	}
 	return nil
@@ -182,16 +307,13 @@ func (c *client) update(namespace string, updates []resources, options UpdateOpt
 		if err != nil {
 			return err
 		}
-		client, err := c.pool.ClientFor(origin.GetObjectKind().GroupVersionKind(), namespace)
-		if err != nil {
-			return err
-		}
-		current, err := client.Get(accessor.GetName(), metav1.GetOptions{})
+		gvk := target.GetObjectKind().GroupVersionKind()
+		current, err := c.getObject(gvk, namespace, accessor.GetName())
 		if err != nil {
 			return err
 		}
 		if !c.own(options.OwnerReferences, current) {
-			return fmt.Errorf("attempt to update a non-affiliated object: %s/%s", accessor.GetNamespace(), accessor.GetName())
+			return fmt.Errorf("attempt to update a non-affiliated object: %s/%s", namespace, accessor.GetName())
 		}
 		if options.Modifier != nil {
 			if err = options.Modifier(origin, target, current); err != nil {
@@ -215,9 +337,21 @@ func (c *client) update(namespace string, updates []resources, options UpdateOpt
 		if len(patch) == 2 && string(patch) == "{}" {
 			continue
 		}
-		_, err = client.Patch(accessor.GetName(), types.StrategicMergePatchType, patch)
+		client, err := c.pool.ClientFor(gvk, namespace)
 		if err != nil {
 			return err
+		}
+		result, err := client.Patch(accessor.GetName(), types.StrategicMergePatchType, patch)
+		if err != nil {
+			return err
+		}
+		if c.layers != nil {
+			// Record the deleted obj into cache.
+			layer, err := c.layers.LayerFor(gvk)
+			if err != nil {
+				return err
+			}
+			layer.Updated(result)
 		}
 	}
 	return nil
@@ -237,11 +371,8 @@ func (c *client) Delete(namespace string, resources []string, options DeleteOpti
 		if err != nil {
 			return err
 		}
-		client, err := c.pool.ClientFor(obj.GetObjectKind().GroupVersionKind(), namespace)
-		if err != nil {
-			return err
-		}
-		obj, err := client.Get(accessor.GetName(), metav1.GetOptions{})
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		obj, err := c.getObject(gvk, namespace, accessor.GetName())
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// Object is not found. Don't need delete
@@ -249,13 +380,27 @@ func (c *client) Delete(namespace string, resources []string, options DeleteOpti
 			}
 			return err
 		}
+
 		if c.own(options.OwnerReferences, obj) {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			client, err := c.pool.ClientFor(gvk, namespace)
+			if err != nil {
+				return err
+			}
 			deletePolicy := metav1.DeletePropagationBackground
 			err = client.Delete(accessor.GetName(), &metav1.DeleteOptions{
 				PropagationPolicy: &deletePolicy,
 			})
 			if err != nil && !errors.IsNotFound(err) {
 				return err
+			}
+			if c.layers != nil {
+				// Record the deleted obj into cache.
+				layer, err := c.layers.LayerFor(gvk)
+				if err != nil {
+					return err
+				}
+				layer.Deleted(obj)
 			}
 		}
 	}
