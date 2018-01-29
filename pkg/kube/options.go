@@ -41,17 +41,18 @@ type UpdateOptions struct {
 	Filter DeletionFilter
 }
 
-// ApplyModifier gets current and desired objects, then checks the update
-// can be performed.
-type ApplyModifier func(current, desired runtime.Object) error
+// OwnerChecker checks if an object can be seemed as child.
+// If the checker returns true, then OwnerReferences would
+// be ignored.
+type OwnerChecker func(obj runtime.Object) bool
 
 // ApplyOptions is a  group options for applying resources
 type ApplyOptions struct {
 	// OwnerReferences enforces owners when create/update/
 	// delete resources in an update operation.
 	OwnerReferences []metav1.OwnerReference
-	// Modifier is used to modify updated resources.
-	Modifier ApplyModifier
+	// OwnerChecker checks
+	Checker OwnerChecker
 }
 
 // DeleteOptions is a  group options for deleting resources

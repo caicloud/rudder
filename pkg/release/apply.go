@@ -79,7 +79,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 	// Apply resources.
 	if err := rc.client.Apply(release.Namespace, manifests, kube.ApplyOptions{
 		OwnerReferences: referencesForRelease(release),
-		// Modifier:        rc.apply,
+		Checker:         rc.ignore,
 	}); err != nil {
 		glog.Infof("Failed to apply resources for release %s/%s: %v", release.Namespace, release.Name, err)
 		return recordError(backend, err)
