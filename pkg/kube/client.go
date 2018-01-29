@@ -130,7 +130,10 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 		if err != nil {
 			return err
 		}
-		if options.OwnerReferences != nil {
+		if options.OwnerReferences != nil &&
+			// options.Checker is used to check if the object is belong to current owner.
+			// If not, add owner references to obj.
+			(options.Checker == nil || !options.Checker(obj)) {
 			accessor.SetOwnerReferences(append(accessor.GetOwnerReferences(), options.OwnerReferences...))
 		}
 		client, err := c.pool.ClientFor(gvk, namespace)
@@ -158,8 +161,11 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 			}
 		} else {
 			// Update
-			if c.own(options.OwnerReferences, existence) {
-				apply.Apply(gvk, existence, obj)
+			if c.own(options.OwnerReferences, existence) ||
+				(options.Checker != nil && options.Checker(obj)) {
+				if err := apply.Apply(gvk, existence, obj); err != nil {
+					return err
+				}
 				result, err := client.Update(obj)
 				if err != nil {
 					return err
