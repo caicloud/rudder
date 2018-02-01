@@ -9,11 +9,20 @@ import (
 	"github.com/caicloud/release-controller/pkg/storage"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // applyRelease wouldn't delete anything. It leaves all antiquated resources to GC. So GC should take
 // latest releases and delete useless resource.
 func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *releaseapi.Release) error {
+	// Deep copy release. Avoid modifying original release.
+	ins, err := scheme.Scheme.Copy(release)
+	if err != nil {
+		glog.V(4).Infof("Failed to deep copy release %s/%s", release.Namespace, release.Name)
+		return err
+	}
+	release = ins.(*releaseapi.Release)
+
 	var manifests []string
 	if release.Spec.RollbackTo != nil {
 		glog.V(4).Infof("Rollback release %s/%s to %v", release.Namespace, release.Name, release.Spec.RollbackTo.Version)
@@ -49,7 +58,13 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 				return recordError(backend, err)
 			}
 			if len(histories) > 0 {
-				release.Status.Version = histories[0].Spec.Version + 1
+				latestHistory := histories[0]
+				if latestHistory.Spec.Config == release.Spec.Config &&
+					reflect.DeepEqual(latestHistory.Spec.Template, release.Spec.Template) {
+					release.Status.Version = latestHistory.Spec.Version
+				} else {
+					release.Status.Version = latestHistory.Spec.Version + 1
+				}
 			} else {
 				release.Status.Version = 1
 			}
@@ -84,7 +99,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		glog.Infof("Failed to apply resources for release %s/%s: %v", release.Namespace, release.Name, err)
 		return recordError(backend, err)
 	}
-	_, err := backend.FlushConditions(storage.ConditionAvailable())
+	_, err = backend.FlushConditions(storage.ConditionAvailable())
 	if err != nil {
 		return err
 	}
