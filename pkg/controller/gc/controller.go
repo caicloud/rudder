@@ -5,9 +5,9 @@ import (
 	"time"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/release-controller/pkg/kube"
-	"github.com/caicloud/release-controller/pkg/render"
-	"github.com/caicloud/release-controller/pkg/store"
+	"github.com/caicloud/rudder/pkg/kube"
+	"github.com/caicloud/rudder/pkg/render"
+	"github.com/caicloud/rudder/pkg/store"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

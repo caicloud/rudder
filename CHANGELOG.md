@@ -1,13 +1,13 @@
 # Change Log
 
-## [Unreleased](https://github.com/caicloud/release-controller/tree/HEAD)
+## [Unreleased](https://github.com/caicloud/rudder/tree/HEAD)
 
 **Merged pull requests:**
 
-- Fix package bugs and add comments [\#5](https://github.com/caicloud/release-controller/pull/5) ([kdada](https://github.com/kdada))
-- Enhance functionality for package kube [\#3](https://github.com/caicloud/release-controller/pull/3) ([kdada](https://github.com/kdada))
-- Add basic packages for release [\#2](https://github.com/caicloud/release-controller/pull/2) ([kdada](https://github.com/kdada))
-- Add vendor [\#1](https://github.com/caicloud/release-controller/pull/1) ([kdada](https://github.com/kdada))
+- Fix package bugs and add comments [\#5](https://github.com/caicloud/rudder/pull/5) ([kdada](https://github.com/kdada))
+- Enhance functionality for package kube [\#3](https://github.com/caicloud/rudder/pull/3) ([kdada](https://github.com/kdada))
+- Add basic packages for release [\#2](https://github.com/caicloud/rudder/pull/2) ([kdada](https://github.com/kdada))
+- Add vendor [\#1](https://github.com/caicloud/rudder/pull/1) ([kdada](https://github.com/kdada))
 
 
 

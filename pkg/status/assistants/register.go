@@ -1,6 +1,6 @@
 package assistants
 
-import "github.com/caicloud/release-controller/pkg/status"
+import "github.com/caicloud/rudder/pkg/status"
 
 // Register registers all assistant for an umpire.
 func Register(umpire status.Umpire) {

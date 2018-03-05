@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caicloud/release-controller/pkg/kube"
+	"github.com/caicloud/rudder/pkg/kube"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"

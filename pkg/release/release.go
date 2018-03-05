@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/release-controller/pkg/storage"
+	"github.com/caicloud/rudder/pkg/storage"
 	"github.com/golang/glog"
 )
 

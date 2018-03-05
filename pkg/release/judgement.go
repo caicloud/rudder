@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/release-controller/pkg/storage"
+	"github.com/caicloud/rudder/pkg/storage"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
