@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/caicloud/release-controller/cmd/release/app"
-	"github.com/caicloud/release-controller/cmd/release/app/options"
+	"github.com/caicloud/rudder/cmd/controller/app"
+	"github.com/caicloud/rudder/cmd/controller/app/options"
 	"github.com/spf13/pflag"
 )
 

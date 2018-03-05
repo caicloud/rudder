@@ -8,7 +8,7 @@ import (
 
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/release-controller/pkg/kube"
+	"github.com/caicloud/rudder/pkg/kube"
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

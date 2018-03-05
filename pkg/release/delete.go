@@ -2,9 +2,9 @@ package release
 
 import (
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/release-controller/pkg/kube"
-	"github.com/caicloud/release-controller/pkg/render"
-	"github.com/caicloud/release-controller/pkg/storage"
+	"github.com/caicloud/rudder/pkg/kube"
+	"github.com/caicloud/rudder/pkg/render"
+	"github.com/caicloud/rudder/pkg/storage"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/runtime"
 )

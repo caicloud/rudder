@@ -3,8 +3,8 @@ package assistants
 import (
 	"fmt"
 
-	"github.com/caicloud/release-controller/pkg/status"
-	"github.com/caicloud/release-controller/pkg/store"
+	"github.com/caicloud/rudder/pkg/status"
+	"github.com/caicloud/rudder/pkg/store"
 	"k8s.io/apimachinery/pkg/runtime"
 	appsv1beta1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
 )

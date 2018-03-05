@@ -2,7 +2,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Release Controller](#release-controller)
+- [Rudder](#rudder)
   - [About the project](#about-the-project)
     - [API docs](#api-docs)
     - [Status](#status)
@@ -10,7 +10,7 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# Release Controller
+# Rudder
 
 ## About the project
 
@@ -33,9 +33,9 @@ $ tree -d -I 'vendor|bin|.git'
 
 ```
 ├── build
-│   └── release
+│   └── controller
 ├── cmd
-│   └── release
+│   └── controller
 │       └── app
 │           └── options
 └── pkg
@@ -54,8 +54,8 @@ $ tree -d -I 'vendor|bin|.git'
 
 Explanation for main pkgs:
 
-- `build` contains a docker file for release controller.
-- `cmd` contains a command for release controller.
+- `build` contains a docker file for rudder controller.
+- `cmd` contains a command for rudder controller.
 - `controller` contains gc/release/status controllers.
 - `kube` contains tools to communicate with kubernetes cluster. You can find:
   - A rest client pool.

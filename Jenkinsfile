@@ -1,4 +1,4 @@
-def releaseImage = "caicloud/release-controller:${params.imageTag}"
+def releaseImage = "caicloud/rudder:${params.imageTag}"
 
 
 
@@ -6,7 +6,7 @@ podTemplate(
     cloud: 'dev-cluster',
     namespace: 'kube-system',
     // change the label to your component name.
-    label: 'release-controller',
+    label: 'rudder',
     containers: [
         // a Jenkins agent (FKA "slave") using JNLP to establish connection.
         containerTemplate(
@@ -35,13 +35,13 @@ podTemplate(
             envVars: [
                 containerEnvVar(key: 'DOCKER_HOST', value: 'unix:///home/jenkins/docker.sock'),
                 // Change the environment variable WORKDIR as needed.
-                containerEnvVar(key: 'WORKDIR', value: '/go/src/github.com/caicloud/release-controller')
+                containerEnvVar(key: 'WORKDIR', value: '/go/src/github.com/caicloud/rudder')
             ],
         )
     ]
 ) {
     // Change the node name as the podTemplate label you set.
-    node('release-controller') {
+    node('rudder') {
         stage('Checkout') {
            checkout scm
         }

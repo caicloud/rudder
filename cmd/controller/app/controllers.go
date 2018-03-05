@@ -3,9 +3,9 @@ package app
 import (
 	"fmt"
 
-	"github.com/caicloud/release-controller/pkg/controller/gc"
-	"github.com/caicloud/release-controller/pkg/controller/release"
-	"github.com/caicloud/release-controller/pkg/controller/status"
+	"github.com/caicloud/rudder/pkg/controller/gc"
+	"github.com/caicloud/rudder/pkg/controller/release"
+	"github.com/caicloud/rudder/pkg/controller/status"
 	"github.com/golang/glog"
 )
 

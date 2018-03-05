@@ -2,7 +2,7 @@ package release
 
 import (
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/release-controller/pkg/storage"
+	"github.com/caicloud/rudder/pkg/storage"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
