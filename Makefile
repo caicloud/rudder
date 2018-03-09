@@ -26,7 +26,7 @@
 #
 
 # Current version of the project.
-VERSION ?= v0.1.3
+VERSION ?= v0.1.4-alpha.4
 
 # This repo's root import path (under GOPATH).
 ROOT := github.com/caicloud/rudder
