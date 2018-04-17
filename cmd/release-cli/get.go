@@ -18,25 +18,27 @@ func init() {
 	fs := get.Flags()
 
 	fs.StringVarP(&getOptions.Server, "server", "s", "", "Kubenetes master host")
-	fs.StringVarP(&getOptions.BearerToken, "bearer-token", "t", "", "Kubenetes master bearer token")
+	fs.StringVarP(&getOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
 	fs.StringVarP(&getOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.BoolVarP(&getOptions.Detail, "detail", "d", false, "Show details")
 }
 
 var getOptions = struct {
 	Server      string
 	BearerToken string
 	Namespace   string
+	Detail      bool
 }{}
 
 var get = &cobra.Command{
 	Use:   "get",
 	Short: "Get a release from kubernetes cluster",
-	Run:   runget,
+	Run:   runGet,
 }
 
-func runget(cmd *cobra.Command, args []string) {
+func runGet(cmd *cobra.Command, args []string) {
 	if getOptions.Server == "" || getOptions.BearerToken == "" {
-		glog.Fatalln("--server or --bearer-token must be set")
+		glog.Fatalln("--server and --bearer-token must be set")
 	}
 
 	if getOptions.Namespace == "" {
@@ -67,10 +69,12 @@ func runget(cmd *cobra.Command, args []string) {
 	}
 	status := ""
 	if len(r.Status.Conditions) > 0 {
-		status = string(r.Status.Conditions[0].Type)
-	} else {
+		status = r.Status.Conditions[0].Message
+	}
+	if status == "" {
 		status = "N/A"
 	}
+
 	meta := [][]string{
 		{"Name:", r.Name},
 		{"Namespace:", r.Namespace},
@@ -78,11 +82,27 @@ func runget(cmd *cobra.Command, args []string) {
 		{"Description:", r.Spec.Description},
 		{"Start Time:", r.CreationTimestamp.String()},
 		{"Last Update:", r.Status.LastUpdateTime.String()},
-		{"Status:", status},
+		{"Status Message:", status},
+		{"Status Details:", ""},
 	}
 	printTable(meta)
-	fmt.Println("Config:")
-	fmt.Println(r.Spec.Config)
+
+	details := [][]string{
+		{"Key", "Path", "Resource", "Available", "Progressing", "Failure"},
+	}
+	for k, v := range r.Status.Details {
+		line := []string{k, v.Path}
+		for r, c := range v.Resources {
+			line = append(line, r,
+				fmt.Sprint(c.Available),
+				fmt.Sprint(c.Progressing),
+				fmt.Sprint(c.Failure),
+			)
+			details = append(details, line)
+			line = []string{"", ""}
+		}
+	}
+	printTable(details)
 
 	fmt.Println("Config(YAML):")
 	cfg, err := yaml.JSONToYAML([]byte(r.Spec.Config))
@@ -91,12 +111,14 @@ func runget(cmd *cobra.Command, args []string) {
 	}
 	fmt.Println(string(cfg))
 
-	fmt.Println("Template:")
-	buf := bytes.NewBuffer(nil)
-	encoder := base64.NewEncoder(base64.StdEncoding, buf)
-	encoder.Write(r.Spec.Template)
-	fmt.Println(buf.String())
+	if getOptions.Detail {
+		fmt.Println("Template:")
+		buf := bytes.NewBuffer(nil)
+		encoder := base64.NewEncoder(base64.StdEncoding, buf)
+		encoder.Write(r.Spec.Template)
+		fmt.Println(buf.String())
 
-	fmt.Println("Manifest:")
-	fmt.Println(r.Status.Manifest)
+		fmt.Println("Manifest:")
+		fmt.Println(r.Status.Manifest)
+	}
 }

@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/caicloud/clientset/kubernetes"
+	"github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +16,7 @@ func init() {
 	fs := list.Flags()
 
 	fs.StringVarP(&listOptions.Server, "server", "s", "", "Kubenetes master host")
-	fs.StringVarP(&listOptions.BearerToken, "bearer-token", "t", "", "Kubenetes master bearer token")
+	fs.StringVarP(&listOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
 	fs.StringVarP(&listOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
 }
 
@@ -31,7 +34,7 @@ var list = &cobra.Command{
 
 func runList(cmd *cobra.Command, args []string) {
 	if listOptions.Server == "" || listOptions.BearerToken == "" {
-		glog.Fatalln("--server or --bearer-token must be set")
+		glog.Fatalln("--server and --bearer-token must be set")
 	}
 	clientset, err := kubernetes.NewForConfig(&rest.Config{
 		Host:        listOptions.Server,
@@ -49,14 +52,30 @@ func runList(cmd *cobra.Command, args []string) {
 		glog.Fatalln(err)
 	}
 
-	table := [][]string{{"NAMESPACE", "NAME", "STATUS"}}
+	table := [][]string{{"NAMESPACE", "NAME", "VALID", "AVAILABLE", "PROCESSING", "FAILURE"}}
 	for _, r := range list.Items {
-		if len(r.Status.Conditions) > 0 {
-			conditions := r.Status.Conditions
-			table = append(table, []string{r.Namespace, r.Name, string(conditions[0].Type)})
-		} else {
-			table = append(table, []string{r.Namespace, r.Name, "N/A"})
+		condition := "YES"
+		for _, c := range r.Status.Conditions {
+			if c.Type == v1alpha1.ReleaseFailure {
+				condition = "NO"
+			}
+
 		}
+		available := int32(0)
+		processing := int32(0)
+		failure := int32(0)
+		for _, v := range r.Status.Details {
+			for _, c := range v.Resources {
+				available += c.Available
+				processing += c.Progressing
+				failure += c.Failure
+			}
+		}
+		table = append(table, []string{r.Namespace, r.Name, condition,
+			fmt.Sprint(available),
+			fmt.Sprint(processing),
+			fmt.Sprint(failure),
+		})
 	}
 	printTable(table)
 }
