@@ -11,4 +11,6 @@ func Register(umpire status.Umpire) {
 	umpire.Employ(gvkJob, JobAssistant)
 	umpire.Employ(gvkCronJob, CronJobAssistant)
 	umpire.Employ(gvkPVC, PVCAssistant)
+	umpire.Employ(gvkConfigMap, ConfigMapAssistant)
+	umpire.Employ(gvkSecret, SecretAssistant)
 }
