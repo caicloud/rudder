@@ -20,15 +20,14 @@ import (
 	"bytes"
 	"log"
 
+	apps "k8s.io/api/apps/v1"
+	batch "k8s.io/api/batch/v1"
+	batchv2 "k8s.io/api/batch/v1beta1"
+	app "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/scheme"
-	app "k8s.io/client-go/pkg/api/v1"
-	apps "k8s.io/client-go/pkg/apis/apps/v1beta1"
-	batch "k8s.io/client-go/pkg/apis/batch/v1"
-	batchv2 "k8s.io/client-go/pkg/apis/batch/v2alpha1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 // AnnotationKey is annotation key of kubernetes object
@@ -87,19 +86,15 @@ func InjectAnnotations(resource string, annos map[AnnotationKey]string) string {
 
 	// check and add annotations to the template of specific types
 	switch ins := obj.(type) {
-	case *extensions.Deployment:
-		{
-			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
-		}
 	case *apps.Deployment:
 		{
 			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
 		}
-	case *extensions.DaemonSet:
+	case *apps.DaemonSet:
 		{
 			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
 		}
-	case *extensions.ReplicaSet:
+	case *apps.ReplicaSet:
 		{
 			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
 		}
