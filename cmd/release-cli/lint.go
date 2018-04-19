@@ -1,19 +1,14 @@
 package main
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
+	"reflect"
 
 	"github.com/caicloud/rudder/pkg/render"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/proto/hapi/chart"
 )
 
 func init() {
@@ -21,12 +16,16 @@ func init() {
 	fs := lint.Flags()
 
 	fs.StringVarP(&lintOptions.Values, "values", "c", "", "Chart values file path. Override values.yaml in template")
+	fs.StringVarP(&lintOptions.Standard, "standard", "s", "", "Standard Chart values file path")
 	fs.StringVarP(&lintOptions.Template, "template", "t", "", "Chart template file path. Can be a tgz package or a chart directory")
+	fs.BoolVarP(&lintOptions.Detail, "detail", "d", false, "Show details")
 }
 
 var lintOptions = struct {
 	Values   string
 	Template string
+	Detail   bool
+	Standard string
 }{}
 
 var lint = &cobra.Command{
@@ -39,139 +38,123 @@ func runLint(cmd *cobra.Command, args []string) {
 	if lintOptions.Template == "" {
 		glog.Fatalln("--template must be set")
 	}
-	chart, err := chartutil.Load(lintOptions.Template)
+	tpl, values, err := loadChart(lintOptions.Template, lintOptions.Values)
 	if err != nil {
-		glog.Fatalln(err)
+		glog.Fatalf("Unable to load template and values: %v", err)
 	}
 
-	cfg := ""
-	if lintOptions.Values != "" {
-		vd, err := ioutil.ReadFile(lintOptions.Values)
+	if lintOptions.Standard != "" {
+		standardValues, err := ioutil.ReadFile(lintOptions.Standard)
 		if err != nil {
-			glog.Fatalln(err)
+			glog.Fatalf("Unable to load standard values: %v", err)
 		}
-		cfg = string(vd)
+		validateValues(string(standardValues), values)
 	}
 
-	if cfg != "" {
-		chart.Values = nil
-	}
-
-	tpl, err := archive(chart)
-	if err != nil {
-		glog.Fatalln(err)
-	}
 	r := render.NewRender()
 	c, err := r.Render(&render.RenderOptions{
 		Namespace: "default",
 		Release:   "release-name",
 		Version:   1,
-		Config:    cfg,
+		Config:    values,
 		Template:  tpl,
 	})
 
 	if err != nil {
 		glog.Fatalln(err)
 	}
-	fmt.Println(render.MergeResources(c.Resources()))
+	if lintOptions.Detail {
+		fmt.Println(render.MergeResources(c.Resources()))
+	}
 }
 
-// zipper header
-var headerBytes = []byte("+aHR0cHM6Ly95b3V0dS5iZS96OVV6MWljandyTQo=")
+func validateValues(standard, values string) {
+	standardMap, err := valuesPath(standard)
+	if err != nil {
+		glog.Error(err)
+	}
+	targetMap, err := valuesPath(values)
+	if err != nil {
+		glog.Error(err)
+	}
+	for path, types := range targetMap {
+		st := standardMap[path]
+		if len(st) <= 0 {
+			glog.Warningf("%s is not in standard", path)
+			continue
+		}
+		for _, t := range types {
+			valid := false
+			for _, s := range st {
+				if t == s {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				glog.Errorf("%s has wrong type %s, must be in %v", path, t, st)
+			}
+		}
+	}
+}
 
-// archive archives chart to data
-func archive(chart *chart.Chart) ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-
-	// Wrap in gzip writer
-	zipper := gzip.NewWriter(buf)
-	zipper.Header.Extra = headerBytes
-	zipper.Header.Comment = "Helm"
-
-	// Wrap in tar writer
-	twriter := tar.NewWriter(zipper)
-	err := writeTarContents(twriter, chart, "")
-
-	// It makes no sense when error occurs.
-	// But close before returning for obeying code convention.
-	// Don't defer the execution of Close().
-	twriter.Close()
-	zipper.Close()
+func valuesPath(values string) (map[string][]string, error) {
+	o := map[string]interface{}{}
+	err := yaml.Unmarshal([]byte(values), &o)
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
-}
-
-// Unarchive unarchives data to chart
-func Unarchive(data []byte) (*chart.Chart, error) {
-	result, err := chartutil.LoadArchive(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
+	types := walkthrough("", o)
+	result := map[string][]string{}
+	for k, ts := range types {
+		arr := result[k]
+		for t, _ := range ts {
+			arr = append(arr, t)
+		}
+		result[k] = arr
 	}
 	return result, nil
 }
 
-// writeTarContents writes a chart to tar package
-// Copy from: k8s.io/helm/pkg/chartutil/save.go
-func writeTarContents(out *tar.Writer, c *chart.Chart, prefix string) error {
-	base := filepath.Join(prefix, c.Metadata.Name)
-
-	// Save Chart.yaml
-	cdata, err := yaml.Marshal(c.Metadata)
-	if err != nil {
-		return err
+func walkthrough(prefix string, obj interface{}) map[string]map[string]bool {
+	if obj == nil {
+		return nil
 	}
-	if err := writeToTar(out, base+"/Chart.yaml", cdata); err != nil {
-		return err
-	}
-
-	// Save values.yaml
-	if c.Values != nil && len(c.Values.Raw) > 0 {
-		if err := writeToTar(out, base+"/values.yaml", []byte(c.Values.Raw)); err != nil {
-			return err
+	result := map[string]map[string]bool{}
+	switch target := obj.(type) {
+	case map[string]interface{}:
+		for k, v := range target {
+			r := walkthrough(prefix+"."+k, v)
+			mergeMap(result, r)
 		}
-	}
-
-	// Save templates
-	for _, f := range c.Templates {
-		n := filepath.Join(base, f.Name)
-		if err := writeToTar(out, n, f.Data); err != nil {
-			return err
+	case []interface{}:
+		for _, o := range target {
+			r := walkthrough(prefix+"[]", o)
+			mergeMap(result, r)
 		}
+	case string:
+		result[prefix] = map[string]bool{reflect.String.String(): true}
+	case bool:
+		result[prefix] = map[string]bool{reflect.Bool.String(): true}
+	case float64:
+		result[prefix] = map[string]bool{reflect.Float64.String(): true}
+	default:
+		// Unreachable
+		glog.Fatalln("Unknown object type: %s", reflect.TypeOf(obj).String())
 	}
-
-	// Save files
-	for _, f := range c.Files {
-		n := filepath.Join(base, f.TypeUrl)
-		if err := writeToTar(out, n, f.Value); err != nil {
-			return err
-		}
-	}
-
-	// Save dependencies
-	for _, dep := range c.Dependencies {
-		if err := writeTarContents(out, dep, base+"/charts"); err != nil {
-			return err
-		}
-	}
-	return nil
+	return result
 }
 
-// writeToTar writes a single file to a tar archive.
-// Copy from: k8s.io/helm/pkg/chartutil/save.go
-func writeToTar(out *tar.Writer, name string, body []byte) error {
-	// TODO: Do we need to create dummy parent directory names if none exist?
-	h := &tar.Header{
-		Name: name,
-		Mode: 0755,
-		Size: int64(len(body)),
+func mergeMap(dst, src map[string]map[string]bool) {
+	for k, v := range src {
+		types := dst[k]
+		if types == nil {
+			types = v
+		} else {
+			for t, _ := range v {
+				types[t] = true
+			}
+		}
+		dst[k] = types
 	}
-	if err := out.WriteHeader(h); err != nil {
-		return err
-	}
-	if _, err := out.Write(body); err != nil {
-		return err
-	}
-	return nil
 }
