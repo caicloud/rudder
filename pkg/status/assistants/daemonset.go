@@ -5,14 +5,14 @@ import (
 
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	extensionsv1beta1 "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
-var gvkDaemonSet = extensionsv1beta1.SchemeGroupVersion.WithKind("DaemonSet")
+var gvkDaemonSet = apps.SchemeGroupVersion.WithKind("DaemonSet")
 
 func DaemonSetAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	ds, ok := obj.(*extensionsv1beta1.DaemonSet)
+	ds, ok := obj.(*apps.DaemonSet)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for daemon set: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}

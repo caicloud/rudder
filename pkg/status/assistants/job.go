@@ -5,14 +5,14 @@ import (
 
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
+	batch "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	batchv1 "k8s.io/client-go/pkg/apis/batch/v1"
 )
 
-var gvkJob = batchv1.SchemeGroupVersion.WithKind("Job")
+var gvkJob = batch.SchemeGroupVersion.WithKind("Job")
 
 func JobAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	job, ok := obj.(*batchv1.Job)
+	job, ok := obj.(*batch.Job)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for job: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}

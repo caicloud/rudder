@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"sync"
 
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	corev1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -65,7 +65,7 @@ func (cp *clientPool) ClientFor(gvk schema.GroupVersionKind, namespace string) (
 	client, ok := cp.clients[gvk]
 	if !ok {
 		conf := *cp.config
-		if gvk.Group == corev1.SchemeGroupVersion.Group {
+		if gvk.Group == core.SchemeGroupVersion.Group {
 			conf.APIPath = "/api"
 		} else {
 			conf.APIPath = "/apis"

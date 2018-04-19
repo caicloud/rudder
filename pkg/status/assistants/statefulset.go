@@ -5,14 +5,14 @@ import (
 
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	appsv1beta1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
 )
 
-var gvkStatefulSet = appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet")
+var gvkStatefulSet = apps.SchemeGroupVersion.WithKind("StatefulSet")
 
 func StatefulSetAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	ss, ok := obj.(*appsv1beta1.StatefulSet)
+	ss, ok := obj.(*apps.StatefulSet)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for stateful set: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}
