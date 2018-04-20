@@ -1,18 +1,18 @@
-package assistants
+package v1beta1
 
 import (
 	"fmt"
 
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
-	apps "k8s.io/api/apps/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var gvkDaemonSet = apps.SchemeGroupVersion.WithKind("DaemonSet")
+var gvkDaemonSet = extensions.SchemeGroupVersion.WithKind("DaemonSet")
 
 func DaemonSetAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	ds, ok := obj.(*apps.DaemonSet)
+	ds, ok := obj.(*extensions.DaemonSet)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for daemon set: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}

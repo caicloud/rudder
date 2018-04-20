@@ -41,7 +41,7 @@ func NewResourceStatusController(
 	releaseInformer informerrelease.ReleaseInformer,
 ) (*StatusController, error) {
 	umpire := status.NewUmpire(store)
-	assistants.Register(umpire)
+	assistants.Assist(umpire)
 	rd := NewResourceDetector(codec, umpire)
 
 	return NewStatusController(

@@ -1,4 +1,4 @@
-package assistants
+package v2alpha1
 
 import (
 	"fmt"
@@ -6,14 +6,15 @@ import (
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
 	batch "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var gvkCronJob = batchv1beta1.SchemeGroupVersion.WithKind("CronJob")
+var gvkCronJob = batchv2alpha1.SchemeGroupVersion.WithKind("CronJob")
+var gvkJob = batch.SchemeGroupVersion.WithKind("Job")
 
 func CronJobAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	cj, ok := obj.(*batchv1beta1.CronJob)
+	cj, ok := obj.(*batchv2alpha1.CronJob)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for cron job: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}

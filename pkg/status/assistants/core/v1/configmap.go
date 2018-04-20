@@ -1,4 +1,4 @@
-package assistants
+package v1
 
 import (
 	"github.com/caicloud/rudder/pkg/status"
@@ -7,8 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var gvkSecret = core.SchemeGroupVersion.WithKind("Secret")
+var gvkConfigMap = core.SchemeGroupVersion.WithKind("ConfigMap")
 
-func SecretAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
+func ConfigMapAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
 	return status.Available, nil
 }
