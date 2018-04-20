@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const (
@@ -100,13 +99,9 @@ type releaseBackend struct {
 
 // ReleaseStorage returns a corresponding storage for the release.
 func (rb *releaseBackend) ReleaseStorage(release *releaseapi.Release) ReleaseStorage {
-	ins, err := scheme.Scheme.DeepCopy(release)
-	if err != nil {
-		panic(err)
-	}
 	return &releaseStorage{
 		name:                 release.Name,
-		release:              ins.(*releaseapi.Release),
+		release:              release.DeepCopy(),
 		releaseClient:        rb.client.Releases(release.Namespace),
 		releaseHistoryClient: rb.client.ReleaseHistories(release.Namespace),
 		layers:               rb.layers,
@@ -206,11 +201,7 @@ func (rs *releaseStorage) Patch(modifier func(release *releaseapi.Release)) (*re
 	if err != nil {
 		return nil, err
 	}
-	ins, err := scheme.Scheme.DeepCopy(rs.release)
-	if err != nil {
-		return nil, err
-	}
-	target := ins.(*releaseapi.Release)
+	target := rs.release.DeepCopy()
 	modifier(target)
 	newOne, err := json.Marshal(target)
 	if err != nil {

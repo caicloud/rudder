@@ -5,19 +5,19 @@ import (
 
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	appsv1beta1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
 )
 
-var gvkDeployment = appsv1beta1.SchemeGroupVersion.WithKind("Deployment")
+var gvkDeployment = apps.SchemeGroupVersion.WithKind("Deployment")
 
 func DeploymentAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	dp, ok := obj.(*appsv1beta1.Deployment)
+	dp, ok := obj.(*apps.Deployment)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for deployment: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}
 	if len(dp.Status.Conditions) > 0 &&
-		dp.Status.Conditions[len(dp.Status.Conditions)-1].Type == appsv1beta1.DeploymentReplicaFailure {
+		dp.Status.Conditions[len(dp.Status.Conditions)-1].Type == apps.DeploymentReplicaFailure {
 		return status.Failure, nil
 	}
 

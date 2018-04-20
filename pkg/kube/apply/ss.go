@@ -1,20 +1,20 @@
 package apply
 
 import (
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	appsv1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
 )
 
 func init() {
-	RegisterApplier(appsv1.SchemeGroupVersion.WithKind("StatefulSet"), applyStatefulSet)
+	RegisterApplier(apps.SchemeGroupVersion.WithKind("StatefulSet"), applyStatefulSet)
 }
 
 func applyStatefulSet(current, desired runtime.Object) error {
 	if current == nil || desired == nil {
 		return nil
 	}
-	co := current.(*appsv1.StatefulSet)
-	do := desired.(*appsv1.StatefulSet)
+	co := current.(*apps.StatefulSet)
+	do := desired.(*apps.StatefulSet)
 	replicas := do.Spec.Replicas
 	template := do.Spec.Template
 	updateStrategy := do.Spec.UpdateStrategy

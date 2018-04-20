@@ -9,15 +9,14 @@ import (
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/store"
 	"github.com/golang/glog"
+
+	apps "k8s.io/api/apps/v1"
+	batch "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
-	apiv1 "k8s.io/client-go/pkg/api/v1"
-	corev1 "k8s.io/client-go/pkg/api/v1"
-	appsv1beta1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
-	batchv1 "k8s.io/client-go/pkg/apis/batch/v1"
-	batchv2alpha1 "k8s.io/client-go/pkg/apis/batch/v2alpha1"
-	extensionsv1beta1 "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -102,19 +101,19 @@ func AvailableKinds() []schema.GroupVersionKind {
 	return []schema.GroupVersionKind{
 		releaseapi.SchemeGroupVersion.WithKind("Release"),
 		releaseapi.SchemeGroupVersion.WithKind("ReleaseHistory"),
-		batchv2alpha1.SchemeGroupVersion.WithKind("CronJob"),
-		extensionsv1beta1.SchemeGroupVersion.WithKind("DaemonSet"),
-		appsv1beta1.SchemeGroupVersion.WithKind("Deployment"),
-		batchv1.SchemeGroupVersion.WithKind("Job"),
-		appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet"),
-		apiv1.SchemeGroupVersion.WithKind("Service"),
-		corev1.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
+		batchv1beta1.SchemeGroupVersion.WithKind("CronJob"),
+		apps.SchemeGroupVersion.WithKind("DaemonSet"),
+		apps.SchemeGroupVersion.WithKind("Deployment"),
+		batch.SchemeGroupVersion.WithKind("Job"),
+		apps.SchemeGroupVersion.WithKind("StatefulSet"),
+		core.SchemeGroupVersion.WithKind("Service"),
+		core.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
 	}
 }
 
 // IgnoredKinds provides kinds which need be ignored when deleted.
 func IgnoredKinds() []schema.GroupVersionKind {
 	return []schema.GroupVersionKind{
-		corev1.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
+		core.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
 	}
 }

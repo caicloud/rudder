@@ -8,8 +8,8 @@ import (
 	"github.com/caicloud/rudder/pkg/render"
 	"github.com/caicloud/rudder/pkg/storage"
 	"github.com/golang/glog"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	apiv1 "k8s.io/client-go/pkg/api/v1"
 )
 
 func (rc *releaseContext) updateRelease(backend storage.ReleaseStorage, release *releaseapi.Release) error {
@@ -77,21 +77,21 @@ func (rc *releaseContext) updateRelease(backend storage.ReleaseStorage, release 
 // fix modifies new object.
 func (rc *releaseContext) fix(origin, new, current runtime.Object) error {
 	switch origin.GetObjectKind().GroupVersionKind() {
-	case apiv1.SchemeGroupVersion.WithKind("Service"):
+	case core.SchemeGroupVersion.WithKind("Service"):
 		// Fix service when convert NodePort to ClusterIP.
-		o, ok := origin.(*apiv1.Service)
+		o, ok := origin.(*core.Service)
 		if !ok {
 			return fmt.Errorf("can't convert origin object %v to service", origin.GetObjectKind())
 		}
-		n, ok := new.(*apiv1.Service)
+		n, ok := new.(*core.Service)
 		if !ok {
 			return fmt.Errorf("can't convert new object %v to service", new.GetObjectKind())
 		}
-		c, ok := current.(*apiv1.Service)
+		c, ok := current.(*core.Service)
 		if !ok {
 			return fmt.Errorf("can't convert current object %v to service", current.GetObjectKind())
 		}
-		if o.Spec.Type == apiv1.ServiceTypeNodePort && n.Spec.Type == apiv1.ServiceTypeClusterIP {
+		if o.Spec.Type == core.ServiceTypeNodePort && n.Spec.Type == core.ServiceTypeClusterIP {
 			// Set NodePort for origin object
 			for i := 0; i < len(o.Spec.Ports) && i < len(c.Spec.Ports); i++ {
 				o.Spec.Ports[i].NodePort = c.Spec.Ports[i].NodePort

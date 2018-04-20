@@ -127,6 +127,10 @@ func (c *cacheObject) GetObjectKind() schema.ObjectKind {
 	return c.object.GetObjectKind()
 }
 
+func (in *cacheObject) DeepCopyObject() runtime.Object {
+	return in.object.DeepCopyObject()
+}
+
 func (c *cacheObject) Expired() bool {
 	return time.Now().After(c.deadline)
 }
@@ -314,7 +318,7 @@ func (c *cacheLayer) selectObject(current, cacheObj runtime.Object) runtime.Obje
 			resourceVersion, _ = strconv.Atoi(meta.GetResourceVersion())
 		}
 	}
-	if !(objCreationTimestamp.Before(co.creationTimestamp)) || resourceVersion >= co.resourceVersion {
+	if !(objCreationTimestamp.Before(&co.creationTimestamp)) || resourceVersion >= co.resourceVersion {
 		// object is newer than co.
 		c.remove(co.object)
 		return current
