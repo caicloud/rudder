@@ -1,4 +1,4 @@
-package assistants
+package v1
 
 import (
 	"github.com/caicloud/rudder/pkg/status"

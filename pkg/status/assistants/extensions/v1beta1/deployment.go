@@ -1,23 +1,23 @@
-package assistants
+package v1beta1
 
 import (
 	"fmt"
 
 	"github.com/caicloud/rudder/pkg/status"
 	"github.com/caicloud/rudder/pkg/store"
-	apps "k8s.io/api/apps/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var gvkDeployment = apps.SchemeGroupVersion.WithKind("Deployment")
+var gvkDeployment = extensions.SchemeGroupVersion.WithKind("Deployment")
 
 func DeploymentAssistant(store store.IntegrationStore, obj runtime.Object) (status.Sentence, error) {
-	dp, ok := obj.(*apps.Deployment)
+	dp, ok := obj.(*extensions.Deployment)
 	if !ok {
 		return status.None, fmt.Errorf("unknown type for deployment: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}
 	if len(dp.Status.Conditions) > 0 &&
-		dp.Status.Conditions[len(dp.Status.Conditions)-1].Type == apps.DeploymentReplicaFailure {
+		dp.Status.Conditions[len(dp.Status.Conditions)-1].Type == extensions.DeploymentReplicaFailure {
 		return status.Failure, nil
 	}
 
