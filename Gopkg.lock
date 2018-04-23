@@ -495,7 +495,7 @@
   version = "v7.0.0"
 
 [[projects]]
-  branch = "release_1.10"
+  branch = "pkg"
   name = "k8s.io/helm"
   packages = [
     "pkg/chartutil",
@@ -508,8 +508,8 @@
     "pkg/releaseutil",
     "pkg/timeconv"
   ]
-  revision = "a1bcbef06f998cc42b6146b76360cdd55a3fea9f"
-  source = "github.com/yejiayu/helm"
+  revision = "125c1afca403b373b98e24f3a98fe20f5a268723"
+  source = "github.com/caicloud/helm"
 
 [[projects]]
   branch = "master"
@@ -520,6 +520,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b331b83ee2f0ca8ad08a6d2976f2128f7df86c496daf0a010f92523ce2fadd4d"
+  inputs-digest = "72a9bc15a6479364bf6d73c8e07cd1e4b8b5ea477b26678d419bf1766ba1b86c"
   solver-name = "gps-cdcl"
   solver-version = 1
