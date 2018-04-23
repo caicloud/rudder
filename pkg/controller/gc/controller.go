@@ -333,8 +333,8 @@ func (gc *GarbageCollector) processNextWorkItem() bool {
 	return true
 }
 
-func keyForResource(gvk schema.GroupVersionKind, name string) string {
-	return gvk.String() + ":" + name
+func keyForResource(gk schema.GroupKind, name string) string {
+	return gk.String() + ":" + name
 }
 
 // collect handles existent resources. So it doesn't handle deletion events.
@@ -361,7 +361,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 				return err
 			}
 			for i, obj := range objs {
-				desired[keyForResource(obj.GetObjectKind().GroupVersionKind(), accessors[i].GetName())] = true
+				desired[keyForResource(obj.GetObjectKind().GroupVersionKind().GroupKind(), accessors[i].GetName())] = true
 			}
 			releaseAlived = true
 		}
@@ -376,7 +376,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 				continue
 			}
 			fallthrough
-		case !desired[keyForResource(res.gvk, res.name)]:
+		case !desired[keyForResource(res.gvk.GroupKind(), res.name)]:
 			// Delete resource
 			client, err := gc.clients.ClientFor(res.gvk, res.namespace)
 			if err != nil {

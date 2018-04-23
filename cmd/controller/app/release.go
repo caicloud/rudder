@@ -108,6 +108,8 @@ func AvailableKinds() []schema.GroupVersionKind {
 		apps.SchemeGroupVersion.WithKind("StatefulSet"),
 		core.SchemeGroupVersion.WithKind("Service"),
 		core.SchemeGroupVersion.WithKind("PersistentVolumeClaim"),
+		core.SchemeGroupVersion.WithKind("ConfigMap"),
+		core.SchemeGroupVersion.WithKind("Secret"),
 	}
 }
 
