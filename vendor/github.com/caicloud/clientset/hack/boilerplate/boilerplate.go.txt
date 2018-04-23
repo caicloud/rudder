@@ -1,4 +1,0 @@
-/*
-Copyright YEAR caicloud authors. All rights reserved.
-*/
-
