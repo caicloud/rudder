@@ -10,8 +10,7 @@ import (
 )
 
 // KnownControllers contains names of controllers
-// var KnownControllers = []string{"release-controller", "status-controller", "garbage-collector"}
-var KnownControllers = []string{"release-controller", "status-controller"}
+var KnownControllers = []string{"release-controller", "status-controller", "garbage-collector"}
 
 // InitFunc is used to launch a particular controller.
 type InitFunc func(ctx ControllerContext) error
@@ -21,7 +20,7 @@ func NewControllerInitializers(availableControllers []string) (map[string]InitFu
 	allControllers := map[string]InitFunc{
 		"release-controller": startReleaseController,
 		"status-controller":  startStatusController,
-		// "garbage-collector":  startGCController,
+		"garbage-collector":  startGCController,
 	}
 
 	result := make(map[string]InitFunc)
