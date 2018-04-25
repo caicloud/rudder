@@ -8,7 +8,7 @@ LABEL maintainer="Wei Guo <guowei@caicloud.io>"
 
 RUN mkdir /data
 
-COPY bin/controller /release
+COPY bin/linux_amd64/controller /release
 
 ENTRYPOINT ["/release"]
 CMD ["-v4"]
