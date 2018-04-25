@@ -8,6 +8,7 @@ import (
 	"github.com/caicloud/rudder/cmd/controller/app/options"
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/store"
+	"github.com/caicloud/rudder/pkg/version"
 	"github.com/golang/glog"
 
 	apps "k8s.io/api/apps/v1"
@@ -48,6 +49,7 @@ type ControllerContext struct {
 // Run runs the ReleaseServer. This should never exit.
 func Run(s *options.ReleaseServer) error {
 	glog.Infof("Initialize release server")
+	glog.Infof("Rudder Build Information, %v", version.Get().Pretty())
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", s.Kubeconfig)
 	if err != nil {
 		return err
