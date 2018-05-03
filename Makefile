@@ -26,7 +26,7 @@
 #
 
 # Current version of the project.
-VERSION ?= v0.1.4
+VERSION ?= v0.1.5
 
 # This repo's root import path (under GOPATH).
 ROOT := github.com/caicloud/rudder
@@ -38,7 +38,7 @@ TARGETS := controller
 # The final built images are:
 #   $[REGISTRY]/$[IMAGE_PREFIX]$[TARGET]$[IMAGE_SUFFIX]:$[VERSION]
 # $[REGISTRY] is an item from $[REGISTRIES], $[TARGET] is an item from $[TARGETS].
-IMAGE_PREFIX ?= $(strip rudder-)
+IMAGE_PREFIX ?= $(strip release-)
 IMAGE_SUFFIX ?= $(strip )
 
 # Container registries.
