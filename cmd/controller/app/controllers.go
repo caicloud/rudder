@@ -54,7 +54,7 @@ func startReleaseController(ctx ControllerContext) error {
 		ctx.Codec,
 		ctx.InformerStore,
 		ctx.KubeClient.ReleaseV1alpha1(),
-		ctx.InformerFactory.Release().V1alpha1().Releases(),
+		ctx.InformerFactory,
 		ctx.IgnoredKinds,
 	)
 	if err != nil {
