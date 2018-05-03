@@ -22,6 +22,8 @@ const (
 	ReleaseUpdate   ReleaseAction = "ReleaseUpdate"
 	ReleaseRollback ReleaseAction = "ReleaseRollback"
 	ReleaseDelete   ReleaseAction = "ReleaseDelete"
+
+	maxRetries = 3
 )
 
 type releaseContext struct {
@@ -55,13 +57,19 @@ func (rc *releaseContext) handle(ctx context.Context, backend storage.ReleaseSto
 			}
 			// In the past, call handleRelease to judge and select an handler for release.
 			// Now just apply the release.
-			if err := rc.applyRelease(backend, target); err != nil {
-				// Something is wrong. Retry it with rate limit.
-				queue.AddRateLimited(target.Name)
-				glog.Errorf("Can't apply release %s/%s: %v", target.Namespace, target.Name, err)
-			} else {
-				glog.V(4).Infof("Successfully handled release: %s/%s", target.Namespace, target.Name)
+			err := rc.applyRelease(backend, target)
+			if err == nil {
 				// Everything is ok. Save target.
+				glog.V(4).Infof("Successfully handled release: %s/%s", target.Namespace, target.Name)
+				queue.Forget(target.Name)
+			} else if queue.NumRequeues(target.Name) < maxRetries {
+				// Something is wrong. Retry it with rate limit.
+				glog.Errorf("Can't apply release %s/%s retry: %v, err: %v",
+					target.Namespace, target.Name, queue.NumRequeues(target.Name), err)
+				queue.AddRateLimited(target.Name)
+			} else {
+				// exceed max retry times
+				glog.Errorf("Dropping release %s/%s from the queue, err: %v", target.Namespace, target.Name, err)
 				queue.Forget(target.Name)
 			}
 			queue.Done(target.Name)
@@ -77,10 +85,10 @@ FOR:
 				target.Spec.Config == rel.Spec.Config &&
 				reflect.DeepEqual(target.Spec.Template, rel.Spec.Template)) {
 				// Config was changed. Add it to queue.
-				target = rel
 				queue.Forget(target.Name)
-				queue.Add(target.Name)
 			}
+			target = rel
+			queue.Add(target.Name)
 		}
 	}
 	queue.ShutDown()
