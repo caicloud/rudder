@@ -12,5 +12,3 @@ COPY bin/linux_amd64/controller /release
 
 ENTRYPOINT ["/release"]
 CMD ["-v4"]
-
-
