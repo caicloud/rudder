@@ -29,10 +29,11 @@ func DeploymentAssistant(store store.IntegrationStore, obj runtime.Object) (stat
 	updated := dp.Status.UpdatedReplicas
 	available := dp.Status.AvailableReplicas
 	unavailable := dp.Status.UnavailableReplicas
+	observedGen := dp.Status.ObservedGeneration
 	switch {
 	case unavailable == 0 && desired == current && desired == updated && desired == available:
 		return status.Available, nil
-	case unavailable > 0 && desired == updated && desired != available:
+	case unavailable > 0 && desired == updated && desired != available && observedGen != 1:
 		// TODO(kdada): Check wrong pods for more precise verdict
 		return status.Failure, nil
 	default:
