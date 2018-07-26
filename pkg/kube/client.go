@@ -163,6 +163,37 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 			// Update
 			if c.own(options.OwnerReferences, existence) ||
 				(options.Checker != nil && options.Checker(obj)) {
+				// Job Cannot be update, so we must re-create Job
+				if gvk.Kind == "Job" {
+					deletePolicy := metav1.DeletePropagationBackground
+					err := client.Delete(accessor.GetName(), &metav1.DeleteOptions{
+						PropagationPolicy: &deletePolicy,
+					})
+					if err != nil && !errors.IsNotFound(err) {
+						return err
+					}
+					if c.layers != nil {
+						// Record the result into cache.
+						layer, err := c.layers.LayerFor(gvk)
+						if err != nil {
+							return err
+						}
+						layer.Deleted(obj)
+					}
+					result, err := client.Create(obj)
+					if err != nil {
+						return err
+					}
+					if c.layers != nil {
+						// Record the result into cache.
+						layer, err := c.layers.LayerFor(gvk)
+						if err != nil {
+							return err
+						}
+						layer.Created(result)
+						continue
+					}
+				}
 				if err := apply.Apply(gvk, existence, obj); err != nil {
 					return err
 				}
