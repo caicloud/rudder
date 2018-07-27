@@ -10,10 +10,13 @@ import (
 	time "time"
 
 	apiextensions "github.com/caicloud/clientset/informers/apiextensions"
+	apiregistration "github.com/caicloud/clientset/informers/apiregistration"
+	cnetworking "github.com/caicloud/clientset/informers/cnetworking"
 	config "github.com/caicloud/clientset/informers/config"
 	loadbalance "github.com/caicloud/clientset/informers/loadbalance"
 	release "github.com/caicloud/clientset/informers/release"
 	resource "github.com/caicloud/clientset/informers/resource"
+	tenant "github.com/caicloud/clientset/informers/tenant"
 	kubernetes "github.com/caicloud/clientset/kubernetes"
 	"k8s.io/api/core/v1"
 	informers "k8s.io/client-go/informers"
@@ -79,14 +82,25 @@ type SharedInformerFactory interface {
 	informers.SharedInformerFactory
 
 	Apiextensions() apiextensions.Interface
+	Apiregistration() apiregistration.Interface
+	Cnetworking() cnetworking.Interface
 	Config() config.Interface
 	Loadbalance() loadbalance.Interface
 	Release() release.Interface
 	Resource() resource.Interface
+	Tenant() tenant.Interface
 }
 
 func (f *sharedInformerFactory) Apiextensions() apiextensions.Interface {
 	return apiextensions.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Apiregistration() apiregistration.Interface {
+	return apiregistration.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Cnetworking() cnetworking.Interface {
+	return cnetworking.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Config() config.Interface {
@@ -103,4 +117,8 @@ func (f *sharedInformerFactory) Release() release.Interface {
 
 func (f *sharedInformerFactory) Resource() resource.Interface {
 	return resource.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Tenant() tenant.Interface {
+	return tenant.New(f, f.namespace, f.tweakListOptions)
 }

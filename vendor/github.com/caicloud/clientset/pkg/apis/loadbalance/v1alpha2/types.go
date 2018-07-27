@@ -149,6 +149,10 @@ type AzureProvider struct {
 
 // LoadBalancerStatus represents the current status of a LoadBalancer
 type LoadBalancerStatus struct {
+	// Accessible specify if the loadbalancer is ready for access
+	Accessible bool `json:"accessible,omitempty"`
+	// AccessIPs specify the entrance ip of loadbalancer
+	AccessIPs []string `json:"accessIPs,omitempty"`
 	// +optional
 	ProxyStatus ProxyStatus `json:"proxyStatus"`
 	// +optional

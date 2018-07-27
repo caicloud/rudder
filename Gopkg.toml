@@ -41,3 +41,7 @@
   name = "k8s.io/helm"
   branch = "pkg"
   source = "github.com/caicloud/helm"
+
+[prune]
+  go-tests = true
+  unused-packages = true
