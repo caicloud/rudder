@@ -27,19 +27,13 @@ type StorageType struct {
 	// create volumes of this storage type.
 	// Required ones for create storage service.
 	// +optional
-	ServiceParameters map[string]StorageTypeParameter `json:"requiredParameters,omitempty" protobuf:"bytes,3,rep,name=requiredParameters"`
+	RequiredParameters map[string]string `json:"requiredParameters,omitempty" protobuf:"bytes,3,rep,name=requiredParameters"`
 
 	// Parameters holds the parameters for the provisioner that should
 	// create volumes of this storage type.
 	// Required ones for create storage class.
 	// +optional
-	ClassParameters map[string]StorageTypeParameter `json:"optionalParameters,omitempty" protobuf:"bytes,3,rep,name=classOptionalParameters"`
-}
-
-type StorageTypeParameter struct {
-	IsRequired  bool
-	PlaceHolder string
-	Describe    string
+	OptionalParameters map[string]string `json:"optionalParameters,omitempty" protobuf:"bytes,3,rep,name=classOptionalParameters"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
