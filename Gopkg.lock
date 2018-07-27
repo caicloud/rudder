@@ -32,6 +32,10 @@
     "informers",
     "informers/apiextensions",
     "informers/apiextensions/v1beta1",
+    "informers/apiregistration",
+    "informers/apiregistration/v1",
+    "informers/cnetworking",
+    "informers/cnetworking/v1alpha1",
     "informers/config",
     "informers/config/v1alpha1",
     "informers/loadbalance",
@@ -41,28 +45,39 @@
     "informers/resource",
     "informers/resource/v1alpha1",
     "informers/resource/v1beta1",
+    "informers/tenant",
+    "informers/tenant/v1alpha1",
     "kubernetes",
     "kubernetes/scheme",
     "kubernetes/typed/apiextensions/v1beta1",
+    "kubernetes/typed/apiregistration/v1",
+    "kubernetes/typed/cnetworking/v1alpha1",
     "kubernetes/typed/config/v1alpha1",
     "kubernetes/typed/loadbalance/v1alpha2",
     "kubernetes/typed/release/v1alpha1",
     "kubernetes/typed/resource/v1alpha1",
     "kubernetes/typed/resource/v1beta1",
+    "kubernetes/typed/tenant/v1alpha1",
     "listers/apiextensions/v1beta1",
+    "listers/apiregistration/v1",
+    "listers/cnetworking/v1alpha1",
     "listers/config/v1alpha1",
     "listers/loadbalance/v1alpha2",
     "listers/release/v1alpha1",
     "listers/resource/v1alpha1",
     "listers/resource/v1beta1",
+    "listers/tenant/v1alpha1",
     "pkg/apis/apiextensions/v1beta1",
+    "pkg/apis/apiregistration/v1",
+    "pkg/apis/cnetworking/v1alpha1",
     "pkg/apis/config/v1alpha1",
     "pkg/apis/loadbalance/v1alpha2",
     "pkg/apis/release/v1alpha1",
     "pkg/apis/resource/v1alpha1",
-    "pkg/apis/resource/v1beta1"
+    "pkg/apis/resource/v1beta1",
+    "pkg/apis/tenant/v1alpha1"
   ]
-  revision = "06bf2b0ce23043aada1213c7ec6fe734b327160e"
+  revision = "4aa50fbb15def450293e7fba02a5eb28e4580754"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"

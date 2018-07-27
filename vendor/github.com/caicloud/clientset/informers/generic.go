@@ -8,11 +8,14 @@ package informers
 
 import (
 	v1beta1 "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1"
-	v1alpha1 "github.com/caicloud/clientset/pkg/apis/config/v1alpha1"
+	v1 "github.com/caicloud/clientset/pkg/apis/apiregistration/v1"
+	v1alpha1 "github.com/caicloud/clientset/pkg/apis/cnetworking/v1alpha1"
+	config_v1alpha1 "github.com/caicloud/clientset/pkg/apis/config/v1alpha1"
 	v1alpha2 "github.com/caicloud/clientset/pkg/apis/loadbalance/v1alpha2"
 	release_v1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	resource_v1alpha1 "github.com/caicloud/clientset/pkg/apis/resource/v1alpha1"
 	resource_v1beta1 "github.com/caicloud/clientset/pkg/apis/resource/v1beta1"
+	tenant_v1alpha1 "github.com/caicloud/clientset/pkg/apis/tenant/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	informers "k8s.io/client-go/informers"
 	cache "k8s.io/client-go/tools/cache"
@@ -41,10 +44,18 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apiextensions().V1beta1().CustomResourceDefinitions().Informer()}, nil
 
+		// Group=apiregistration.k8s.io, Version=v1
+	case v1.SchemeGroupVersion.WithResource("apiservices"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apiregistration().V1().APIServices().Informer()}, nil
+
+		// Group=cnetworking.caicloud.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("networkpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Cnetworking().V1alpha1().NetworkPolicies().Informer()}, nil
+
 		// Group=config.caicloud.io, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("configclaims"):
+	case config_v1alpha1.SchemeGroupVersion.WithResource("configclaims"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().ConfigClaims().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("configreferences"):
+	case config_v1alpha1.SchemeGroupVersion.WithResource("configreferences"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().ConfigReferences().Informer()}, nil
 
 		// Group=loadbalance.caicloud.io, Version=v1alpha2
@@ -78,6 +89,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().StorageTypes().Informer()}, nil
 	case resource_v1beta1.SchemeGroupVersion.WithResource("tags"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().Tags().Informer()}, nil
+
+		// Group=tenant.caicloud.io, Version=v1alpha1
+	case tenant_v1alpha1.SchemeGroupVersion.WithResource("clusterquotas"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Tenant().V1alpha1().ClusterQuotas().Informer()}, nil
+	case tenant_v1alpha1.SchemeGroupVersion.WithResource("partitions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Tenant().V1alpha1().Partitions().Informer()}, nil
+	case tenant_v1alpha1.SchemeGroupVersion.WithResource("tenants"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Tenant().V1alpha1().Tenants().Informer()}, nil
 
 	}
 
