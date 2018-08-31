@@ -2,9 +2,7 @@
 # Copyright 2017 The Caicloud Authors.
 #
 
-FROM cargo.caicloudprivatetest.com/caicloud/debian:jessie
-
-LABEL maintainer="Wei Guo <guowei@caicloud.io>"
+FROM cargo.caicloudprivatetest.com/caicloud/alpine:3.7
 
 RUN mkdir /data
 
