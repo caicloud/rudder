@@ -354,10 +354,32 @@ func (rs *releaseStorage) AddCondition(condition releaseapi.ReleaseCondition) (*
 	})
 }
 
+func conditionsEqual(conditions1, conditions2 []releaseapi.ReleaseCondition) bool {
+	if len(conditions1) != len(conditions2) {
+		return false
+	}
+
+	for _, c1 := range conditions1 {
+		euqal := false
+		for _, c2 := range conditions2 {
+			if c1.Type == c2.Type && c1.Reason == c2.Reason &&
+				c1.Status == c2.Status && c1.Message == c2.Message {
+				euqal = true
+			}
+		}
+		if !euqal {
+			return false
+		}
+	}
+	return true
+}
+
 // FlushConditions flushes conditions to running release.
 func (rs *releaseStorage) FlushConditions(conditions ...releaseapi.ReleaseCondition) (*releaseapi.Release, error) {
 	return rs.Patch(func(release *releaseapi.Release) {
-		release.Status.Conditions = conditions
+		if !conditionsEqual(release.Status.Conditions, conditions) {
+			release.Status.Conditions = conditions
+		}
 	})
 }
 
