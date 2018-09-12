@@ -11,12 +11,12 @@ import (
 
 	kubernetes "github.com/caicloud/clientset/kubernetes"
 	v1alpha1 "github.com/caicloud/clientset/listers/tenant/v1alpha1"
-	tenant_v1alpha1 "github.com/caicloud/clientset/pkg/apis/tenant/v1alpha1"
+	tenantv1alpha1 "github.com/caicloud/clientset/pkg/apis/tenant/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	internalinterfaces "k8s.io/client-go/informers/internalinterfaces"
-	client_go_kubernetes "k8s.io/client-go/kubernetes"
+	clientgokubernetes "k8s.io/client-go/kubernetes"
 	cache "k8s.io/client-go/tools/cache"
 )
 
@@ -58,18 +58,18 @@ func NewFilteredTenantInformer(client kubernetes.Interface, resyncPeriod time.Du
 				return client.TenantV1alpha1().Tenants().Watch(options)
 			},
 		},
-		&tenant_v1alpha1.Tenant{},
+		&tenantv1alpha1.Tenant{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *tenantInformer) defaultInformer(client client_go_kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *tenantInformer) defaultInformer(client clientgokubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFilteredTenantInformer(client.(kubernetes.Interface), resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *tenantInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&tenant_v1alpha1.Tenant{}, f.defaultInformer)
+	return f.factory.InformerFor(&tenantv1alpha1.Tenant{}, f.defaultInformer)
 }
 
 func (f *tenantInformer) Lister() v1alpha1.TenantLister {

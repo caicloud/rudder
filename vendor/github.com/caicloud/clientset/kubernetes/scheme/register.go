@@ -11,6 +11,7 @@ import (
 	apiregistrationv1 "github.com/caicloud/clientset/pkg/apis/apiregistration/v1"
 	cnetworkingv1alpha1 "github.com/caicloud/clientset/pkg/apis/cnetworking/v1alpha1"
 	configv1alpha1 "github.com/caicloud/clientset/pkg/apis/config/v1alpha1"
+	devopsv1 "github.com/caicloud/clientset/pkg/apis/devops/v1"
 	loadbalancev1alpha2 "github.com/caicloud/clientset/pkg/apis/loadbalance/v1alpha2"
 	releasev1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	resourcev1alpha1 "github.com/caicloud/clientset/pkg/apis/resource/v1alpha1"
@@ -47,9 +48,10 @@ func AddToScheme(scheme *runtime.Scheme) {
 	apiregistrationv1.AddToScheme(scheme)
 	cnetworkingv1alpha1.AddToScheme(scheme)
 	configv1alpha1.AddToScheme(scheme)
+	devopsv1.AddToScheme(scheme)
 	loadbalancev1alpha2.AddToScheme(scheme)
 	releasev1alpha1.AddToScheme(scheme)
-	resourcev1alpha1.AddToScheme(scheme)
 	resourcev1beta1.AddToScheme(scheme)
+	resourcev1alpha1.AddToScheme(scheme)
 	tenantv1alpha1.AddToScheme(scheme)
 }

@@ -11,12 +11,12 @@ import (
 
 	kubernetes "github.com/caicloud/clientset/kubernetes"
 	v1alpha1 "github.com/caicloud/clientset/listers/cnetworking/v1alpha1"
-	cnetworking_v1alpha1 "github.com/caicloud/clientset/pkg/apis/cnetworking/v1alpha1"
+	cnetworkingv1alpha1 "github.com/caicloud/clientset/pkg/apis/cnetworking/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	internalinterfaces "k8s.io/client-go/informers/internalinterfaces"
-	client_go_kubernetes "k8s.io/client-go/kubernetes"
+	clientgokubernetes "k8s.io/client-go/kubernetes"
 	cache "k8s.io/client-go/tools/cache"
 )
 
@@ -59,18 +59,18 @@ func NewFilteredNetworkPolicyInformer(client kubernetes.Interface, namespace str
 				return client.CnetworkingV1alpha1().NetworkPolicies(namespace).Watch(options)
 			},
 		},
-		&cnetworking_v1alpha1.NetworkPolicy{},
+		&cnetworkingv1alpha1.NetworkPolicy{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *networkPolicyInformer) defaultInformer(client client_go_kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *networkPolicyInformer) defaultInformer(client clientgokubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFilteredNetworkPolicyInformer(client.(kubernetes.Interface), f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *networkPolicyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&cnetworking_v1alpha1.NetworkPolicy{}, f.defaultInformer)
+	return f.factory.InformerFor(&cnetworkingv1alpha1.NetworkPolicy{}, f.defaultInformer)
 }
 
 func (f *networkPolicyInformer) Lister() v1alpha1.NetworkPolicyLister {
