@@ -27,6 +27,8 @@ type IntegrationStore interface {
 	InformerFor(gvk schema.GroupVersionKind) (informers.GenericInformer, error)
 	// LayerFor get a layer for concrete kind.
 	LayerFor(gvk schema.GroupVersionKind) (kube.CacheLayer, error)
+	// SharedInformerFactory ...
+	SharedInformerFactory() informers.SharedInformerFactory
 }
 
 type integrationStore struct {
@@ -75,6 +77,11 @@ func (is *integrationStore) informerFor(gvk schema.GroupVersionKind) (*cacheInfo
 		}
 	}
 	return informer, nil
+}
+
+// SharedInformerFactory ...
+func (is *integrationStore) SharedInformerFactory() informers.SharedInformerFactory {
+	return is.factory
 }
 
 // InformerFor gets a generic informer for specified GroupVersionKind.
