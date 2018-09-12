@@ -155,11 +155,10 @@ func (in *ConfigReferenceStatus) DeepCopyInto(out *ConfigReferenceStatus) {
 		in, out := &in.Refs, &out.Refs
 		*out = make([]*Reference, len(*in))
 		for i := range *in {
-			if (*in)[i] == nil {
-				(*out)[i] = nil
-			} else {
-				(*out)[i] = new(Reference)
-				(*in)[i].DeepCopyInto((*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(Reference)
+				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
@@ -188,11 +187,10 @@ func (in *Reference) DeepCopyInto(out *Reference) {
 		in, out := &in.Children, &out.Children
 		*out = make([]*Reference, len(*in))
 		for i := range *in {
-			if (*in)[i] == nil {
-				(*out)[i] = nil
-			} else {
-				(*out)[i] = new(Reference)
-				(*in)[i].DeepCopyInto((*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(Reference)
+				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
