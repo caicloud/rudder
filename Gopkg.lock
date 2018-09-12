@@ -38,6 +38,8 @@
     "informers/cnetworking/v1alpha1",
     "informers/config",
     "informers/config/v1alpha1",
+    "informers/devops",
+    "informers/devops/v1",
     "informers/loadbalance",
     "informers/loadbalance/v1alpha2",
     "informers/release",
@@ -53,15 +55,57 @@
     "kubernetes/typed/apiregistration/v1",
     "kubernetes/typed/cnetworking/v1alpha1",
     "kubernetes/typed/config/v1alpha1",
+    "kubernetes/typed/devops/v1",
     "kubernetes/typed/loadbalance/v1alpha2",
     "kubernetes/typed/release/v1alpha1",
     "kubernetes/typed/resource/v1alpha1",
     "kubernetes/typed/resource/v1beta1",
     "kubernetes/typed/tenant/v1alpha1",
+    "listerfactory",
+    "listerfactory/admissionregistration",
+    "listerfactory/admissionregistration/v1alpha1",
+    "listerfactory/admissionregistration/v1beta1",
+    "listerfactory/apps",
+    "listerfactory/apps/v1",
+    "listerfactory/apps/v1beta1",
+    "listerfactory/apps/v1beta2",
+    "listerfactory/autoscaling",
+    "listerfactory/autoscaling/v1",
+    "listerfactory/autoscaling/v2beta1",
+    "listerfactory/batch",
+    "listerfactory/batch/v1",
+    "listerfactory/batch/v1beta1",
+    "listerfactory/batch/v2alpha1",
+    "listerfactory/certificates",
+    "listerfactory/certificates/v1beta1",
+    "listerfactory/core",
+    "listerfactory/core/v1",
+    "listerfactory/events",
+    "listerfactory/events/v1beta1",
+    "listerfactory/extensions",
+    "listerfactory/extensions/v1beta1",
+    "listerfactory/internalinterfaces",
+    "listerfactory/networking",
+    "listerfactory/networking/v1",
+    "listerfactory/policy",
+    "listerfactory/policy/v1beta1",
+    "listerfactory/rbac",
+    "listerfactory/rbac/v1",
+    "listerfactory/rbac/v1alpha1",
+    "listerfactory/rbac/v1beta1",
+    "listerfactory/scheduling",
+    "listerfactory/scheduling/v1alpha1",
+    "listerfactory/settings",
+    "listerfactory/settings/v1alpha1",
+    "listerfactory/storage",
+    "listerfactory/storage/v1",
+    "listerfactory/storage/v1alpha1",
+    "listerfactory/storage/v1beta1",
     "listers/apiextensions/v1beta1",
     "listers/apiregistration/v1",
     "listers/cnetworking/v1alpha1",
     "listers/config/v1alpha1",
+    "listers/devops/v1",
     "listers/loadbalance/v1alpha2",
     "listers/release/v1alpha1",
     "listers/resource/v1alpha1",
@@ -71,13 +115,29 @@
     "pkg/apis/apiregistration/v1",
     "pkg/apis/cnetworking/v1alpha1",
     "pkg/apis/config/v1alpha1",
+    "pkg/apis/devops/v1",
     "pkg/apis/loadbalance/v1alpha2",
     "pkg/apis/release/v1alpha1",
     "pkg/apis/resource/v1alpha1",
     "pkg/apis/resource/v1beta1",
-    "pkg/apis/tenant/v1alpha1"
+    "pkg/apis/tenant/v1alpha1",
+    "util/status",
+    "util/syncqueue"
   ]
-  revision = "4aa50fbb15def450293e7fba02a5eb28e4580754"
+  revision = "582fe5d0f8e830836c6712f337323945d819c9be"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/caicloud/rudder-client"
+  packages = [
+    "status",
+    "status/apps/v1",
+    "status/batch/v1",
+    "status/batch/v1beta1",
+    "status/core/v1",
+    "status/universal"
+  ]
+  revision = "f566013fdce605b4f6677530df1e3f2032db7b10"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -339,6 +399,7 @@
 [[projects]]
   name = "k8s.io/apimachinery"
   packages = [
+    "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
@@ -535,6 +596,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "72a9bc15a6479364bf6d73c8e07cd1e4b8b5ea477b26678d419bf1766ba1b86c"
+  inputs-digest = "a1bcca28a79f09358bcf4e788c0aa650f7effee0a80a331b96c67e18ec92d08e"
   solver-name = "gps-cdcl"
   solver-version = 1

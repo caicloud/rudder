@@ -54,16 +54,6 @@ type ReleaseCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-// ResourceCounter is a status counter
-type ResourceCounter struct {
-	// Available is the count of running target
-	Available int32 `json:"available"`
-	// Progressing is the count of mutating target
-	Progressing int32 `json:"progressing"`
-	// Failure is the count of wrong target
-	Failure int32 `json:"failure"`
-}
-
 // ReleaseDetailStatus describes the status of a part of a release.
 type ReleaseDetailStatus struct {
 	// Path is the path which resources from
@@ -71,6 +61,56 @@ type ReleaseDetailStatus struct {
 	// Resources contains a kind-counter map.
 	// A kind should be a unique name of a group resources.
 	Resources map[string]ResourceCounter `json:"resources,omitempty"`
+}
+
+// ResourceCounter is a status counter
+type ResourceCounter map[ResourcePhase]int32
+
+// ResourcePhase is a label for the condition of a resource at the current time.
+type ResourcePhase string
+
+const (
+	// ResourceSuspended means that:
+	// - For a long running resource: it desire 0 replicas and there is really
+	//   no replica belongs to it now.
+	// - For CronJob: it means that cronjob suspend subsequent executions
+	ResourceSuspended ResourcePhase = "Suspended"
+	// ResourcePending only for CronJob, means the CronJob has no Job histories
+	ResourcePending ResourcePhase = "Pending"
+	// ResourceProcessing means that:
+	// - Deployment, StatefulSet, DaemonSet: all pods are updated, and the replicas
+	//   are in sacling
+	// - Job: the succeeded pod number doesn't meet the desired completion number
+	// - CronJob: there are unfinished Jobs beloings to the CronJob
+	// - PVC: the pvc is not bound
+	ResourceProcessing ResourcePhase = "Processing"
+	// ResourceUpdating means:
+	// - Deployment, StatefulSet, DaemonSet: the system is working to deal with the
+	//   resource's updating request there are some old pods mixed with the
+	//   updated pods, and no pods are in Abnormal
+	ResourceUpdating ResourcePhase = "Updating"
+	// ResourceRunning means:
+	// - Deployment, StatefulSet, DaemonSet: all pods are updated, and thay are running
+	// - PVC: bound
+	// - Service, ConfigMap .e.g
+	ResourceRunning ResourcePhase = "Running"
+	// ResourceSucceeded means:
+	// - Job: the succeeded pod number meets the desired completion number
+	// - CronJob: the latest Job in history is Succeeded
+	ResourceSucceeded ResourcePhase = "Succeeded"
+	// ResourceFailed means:
+	// - Deployment, StatefulSet, DaemonSet: one of the pods is in Abnormal
+	// - Job: the job doesn't finished in active deadline
+	// - CronJob: the latest Job in history is Succeeded
+	// - PVC: Lost
+	ResourceFailed ResourcePhase = "Failed"
+)
+
+// ResourceStatus describes the current status of the resource
+type ResourceStatus struct {
+	Phase   ResourcePhase `json:"phase,omitempty"`
+	Reason  string        `json:"reason,omitempty"`
+	Message string        `json:"message,omitempty"`
 }
 
 // ReleaseStatus describes the status of a release

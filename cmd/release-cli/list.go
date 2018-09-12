@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/caicloud/clientset/kubernetes"
 	"github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
@@ -52,7 +53,7 @@ func runList(cmd *cobra.Command, args []string) {
 		glog.Fatalln(err)
 	}
 
-	table := [][]string{{"NAMESPACE", "NAME", "VALID", "AVAILABLE", "PROCESSING", "FAILURE"}}
+	table := [][]string{{"NAMESPACE", "NAME", "VALID", "STATUS"}}
 	for _, r := range list.Items {
 		condition := "YES"
 		for _, c := range r.Status.Conditions {
@@ -61,21 +62,27 @@ func runList(cmd *cobra.Command, args []string) {
 			}
 
 		}
-		available := int32(0)
-		processing := int32(0)
-		failure := int32(0)
+		counter := make(v1alpha1.ResourceCounter, 0)
 		for _, v := range r.Status.Details {
 			for _, c := range v.Resources {
-				available += c.Available
-				processing += c.Progressing
-				failure += c.Failure
+				for k, n := range c {
+					if _, ok := counter[k]; ok {
+						counter[k] += n
+					} else {
+						counter[k] = n
+					}
+				}
 			}
 		}
-		table = append(table, []string{r.Namespace, r.Name, condition,
-			fmt.Sprint(available),
-			fmt.Sprint(processing),
-			fmt.Sprint(failure),
-		})
+		table = append(table, []string{r.Namespace, r.Name, condition, printCounter(counter)})
 	}
 	printTable(table)
+}
+
+func printCounter(c v1alpha1.ResourceCounter) string {
+	list := make([]string, 0)
+	for k, v := range c {
+		list = append(list, fmt.Sprintf("%v:%v", k, v))
+	}
+	return strings.Join(list, ",")
 }
