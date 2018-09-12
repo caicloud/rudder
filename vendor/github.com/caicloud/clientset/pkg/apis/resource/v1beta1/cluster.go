@@ -37,6 +37,8 @@ type ClusterSpec struct {
 	Versions         *ClusterVersions `json:"versions,omitempty"`
 	Masters          []string         `json:"masters"`
 	Nodes            []string         `json:"nodes"`
+	// deploy
+	DeployToolsExternalVars map[string]string `json:"deployToolsExternalVars"`
 	// adapt expired
 	ClusterToken string       `json:"clusterToken"`
 	Ratio        ClusterRatio `json:"ratio"`
@@ -190,8 +192,8 @@ type ConfigList struct {
 // outside
 
 type ClusterNetwork struct {
-	Type NetworkType `json:"type"`
-	// TODO
+	Type        NetworkType `json:"type"`
+	ClusterCIDR string      `json:"clusterCIDR"`
 }
 
 type ClusterAuth struct {

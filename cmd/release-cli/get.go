@@ -88,16 +88,12 @@ func runGet(cmd *cobra.Command, args []string) {
 	printTable(meta)
 
 	details := [][]string{
-		{"Key", "Path", "Resource", "Available", "Progressing", "Failure"},
+		{"Key", "Path", "Resource", "STATUS"},
 	}
 	for k, v := range r.Status.Details {
 		line := []string{k, v.Path}
 		for r, c := range v.Resources {
-			line = append(line, r,
-				fmt.Sprint(c.Available),
-				fmt.Sprint(c.Progressing),
-				fmt.Sprint(c.Failure),
-			)
+			line = append(line, r, printCounter(c))
 			details = append(details, line)
 			line = []string{"", ""}
 		}

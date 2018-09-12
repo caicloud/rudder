@@ -11,12 +11,12 @@ import (
 
 	kubernetes "github.com/caicloud/clientset/kubernetes"
 	v1 "github.com/caicloud/clientset/listers/apiregistration/v1"
-	apiregistration_v1 "github.com/caicloud/clientset/pkg/apis/apiregistration/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiregistrationv1 "github.com/caicloud/clientset/pkg/apis/apiregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	internalinterfaces "k8s.io/client-go/informers/internalinterfaces"
-	client_go_kubernetes "k8s.io/client-go/kubernetes"
+	clientgokubernetes "k8s.io/client-go/kubernetes"
 	cache "k8s.io/client-go/tools/cache"
 )
 
@@ -45,31 +45,31 @@ func NewAPIServiceInformer(client kubernetes.Interface, resyncPeriod time.Durati
 func NewFilteredAPIServiceInformer(client kubernetes.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ApiregistrationV1().APIServices().List(options)
 			},
-			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ApiregistrationV1().APIServices().Watch(options)
 			},
 		},
-		&apiregistration_v1.APIService{},
+		&apiregistrationv1.APIService{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *aPIServiceInformer) defaultInformer(client client_go_kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *aPIServiceInformer) defaultInformer(client clientgokubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFilteredAPIServiceInformer(client.(kubernetes.Interface), resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *aPIServiceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiregistration_v1.APIService{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiregistrationv1.APIService{}, f.defaultInformer)
 }
 
 func (f *aPIServiceInformer) Lister() v1.APIServiceLister {

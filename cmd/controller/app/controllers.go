@@ -65,11 +65,13 @@ func startReleaseController(ctx ControllerContext) error {
 }
 
 func startStatusController(ctx ControllerContext) error {
-	statusController, err := status.NewResourceStatusController(
+	statusController, err := status.NewStatusController(
 		ctx.Codec,
 		ctx.InformerStore,
 		ctx.KubeClient.ReleaseV1alpha1(),
 		ctx.InformerFactory.Release().V1alpha1().Releases(),
+		ctx.AvailableKinds,
+		ctx.Resources,
 	)
 	if err != nil {
 		return err

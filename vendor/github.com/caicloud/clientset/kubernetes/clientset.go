@@ -11,6 +11,7 @@ import (
 	apiregistrationv1 "github.com/caicloud/clientset/kubernetes/typed/apiregistration/v1"
 	cnetworkingv1alpha1 "github.com/caicloud/clientset/kubernetes/typed/cnetworking/v1alpha1"
 	configv1alpha1 "github.com/caicloud/clientset/kubernetes/typed/config/v1alpha1"
+	devopsv1 "github.com/caicloud/clientset/kubernetes/typed/devops/v1"
 	loadbalancev1alpha2 "github.com/caicloud/clientset/kubernetes/typed/loadbalance/v1alpha2"
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
 	resourcev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/resource/v1alpha1"
@@ -35,16 +36,19 @@ type Interface interface {
 	ConfigV1alpha1() configv1alpha1.ConfigV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Config() configv1alpha1.ConfigV1alpha1Interface
+	DevopsV1() devopsv1.DevopsV1Interface
+	// Deprecated: please explicitly pick a version if possible.
+	Devops() devopsv1.DevopsV1Interface
 	LoadbalanceV1alpha2() loadbalancev1alpha2.LoadbalanceV1alpha2Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Loadbalance() loadbalancev1alpha2.LoadbalanceV1alpha2Interface
 	ReleaseV1alpha1() releasev1alpha1.ReleaseV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Release() releasev1alpha1.ReleaseV1alpha1Interface
-	ResourceV1alpha1() resourcev1alpha1.ResourceV1alpha1Interface
 	ResourceV1beta1() resourcev1beta1.ResourceV1beta1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Resource() resourcev1beta1.ResourceV1beta1Interface
+	ResourceV1alpha1() resourcev1alpha1.ResourceV1alpha1Interface
 	TenantV1alpha1() tenantv1alpha1.TenantV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Tenant() tenantv1alpha1.TenantV1alpha1Interface
@@ -58,10 +62,11 @@ type Clientset struct {
 	apiregistrationV1    *apiregistrationv1.ApiregistrationV1Client
 	cnetworkingV1alpha1  *cnetworkingv1alpha1.CnetworkingV1alpha1Client
 	configV1alpha1       *configv1alpha1.ConfigV1alpha1Client
+	devopsV1             *devopsv1.DevopsV1Client
 	loadbalanceV1alpha2  *loadbalancev1alpha2.LoadbalanceV1alpha2Client
 	releaseV1alpha1      *releasev1alpha1.ReleaseV1alpha1Client
-	resourceV1alpha1     *resourcev1alpha1.ResourceV1alpha1Client
 	resourceV1beta1      *resourcev1beta1.ResourceV1beta1Client
+	resourceV1alpha1     *resourcev1alpha1.ResourceV1alpha1Client
 	tenantV1alpha1       *tenantv1alpha1.TenantV1alpha1Client
 }
 
@@ -109,6 +114,17 @@ func (c *Clientset) Config() configv1alpha1.ConfigV1alpha1Interface {
 	return c.configV1alpha1
 }
 
+// DevopsV1 retrieves the DevopsV1Client
+func (c *Clientset) DevopsV1() devopsv1.DevopsV1Interface {
+	return c.devopsV1
+}
+
+// Deprecated: Devops retrieves the default version of DevopsClient.
+// Please explicitly pick a version.
+func (c *Clientset) Devops() devopsv1.DevopsV1Interface {
+	return c.devopsV1
+}
+
 // LoadbalanceV1alpha2 retrieves the LoadbalanceV1alpha2Client
 func (c *Clientset) LoadbalanceV1alpha2() loadbalancev1alpha2.LoadbalanceV1alpha2Interface {
 	return c.loadbalanceV1alpha2
@@ -131,11 +147,6 @@ func (c *Clientset) Release() releasev1alpha1.ReleaseV1alpha1Interface {
 	return c.releaseV1alpha1
 }
 
-// ResourceV1alpha1 retrieves the ResourceV1alpha1Client
-func (c *Clientset) ResourceV1alpha1() resourcev1alpha1.ResourceV1alpha1Interface {
-	return c.resourceV1alpha1
-}
-
 // ResourceV1beta1 retrieves the ResourceV1beta1Client
 func (c *Clientset) ResourceV1beta1() resourcev1beta1.ResourceV1beta1Interface {
 	return c.resourceV1beta1
@@ -145,6 +156,11 @@ func (c *Clientset) ResourceV1beta1() resourcev1beta1.ResourceV1beta1Interface {
 // Please explicitly pick a version.
 func (c *Clientset) Resource() resourcev1beta1.ResourceV1beta1Interface {
 	return c.resourceV1beta1
+}
+
+// ResourceV1alpha1 retrieves the ResourceV1alpha1Client
+func (c *Clientset) ResourceV1alpha1() resourcev1alpha1.ResourceV1alpha1Interface {
+	return c.resourceV1alpha1
 }
 
 // TenantV1alpha1 retrieves the TenantV1alpha1Client
@@ -182,6 +198,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.devopsV1, err = devopsv1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.loadbalanceV1alpha2, err = loadbalancev1alpha2.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -190,11 +210,11 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.resourceV1alpha1, err = resourcev1alpha1.NewForConfig(&configShallowCopy)
+	cs.resourceV1beta1, err = resourcev1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
-	cs.resourceV1beta1, err = resourcev1beta1.NewForConfig(&configShallowCopy)
+	cs.resourceV1alpha1, err = resourcev1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -218,10 +238,11 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.apiregistrationV1 = apiregistrationv1.NewForConfigOrDie(c)
 	cs.cnetworkingV1alpha1 = cnetworkingv1alpha1.NewForConfigOrDie(c)
 	cs.configV1alpha1 = configv1alpha1.NewForConfigOrDie(c)
+	cs.devopsV1 = devopsv1.NewForConfigOrDie(c)
 	cs.loadbalanceV1alpha2 = loadbalancev1alpha2.NewForConfigOrDie(c)
 	cs.releaseV1alpha1 = releasev1alpha1.NewForConfigOrDie(c)
-	cs.resourceV1alpha1 = resourcev1alpha1.NewForConfigOrDie(c)
 	cs.resourceV1beta1 = resourcev1beta1.NewForConfigOrDie(c)
+	cs.resourceV1alpha1 = resourcev1alpha1.NewForConfigOrDie(c)
 	cs.tenantV1alpha1 = tenantv1alpha1.NewForConfigOrDie(c)
 
 	cs.Clientset = kubernetes.NewForConfigOrDie(c)
@@ -235,10 +256,11 @@ func New(c rest.Interface) *Clientset {
 	cs.apiregistrationV1 = apiregistrationv1.New(c)
 	cs.cnetworkingV1alpha1 = cnetworkingv1alpha1.New(c)
 	cs.configV1alpha1 = configv1alpha1.New(c)
+	cs.devopsV1 = devopsv1.New(c)
 	cs.loadbalanceV1alpha2 = loadbalancev1alpha2.New(c)
 	cs.releaseV1alpha1 = releasev1alpha1.New(c)
-	cs.resourceV1alpha1 = resourcev1alpha1.New(c)
 	cs.resourceV1beta1 = resourcev1beta1.New(c)
+	cs.resourceV1alpha1 = resourcev1alpha1.New(c)
 	cs.tenantV1alpha1 = tenantv1alpha1.New(c)
 
 	cs.Clientset = kubernetes.New(c)

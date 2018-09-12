@@ -175,12 +175,8 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 	in.Auth.DeepCopyInto(&out.Auth)
 	if in.Versions != nil {
 		in, out := &in.Versions, &out.Versions
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ClusterVersions)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(ClusterVersions)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Masters != nil {
 		in, out := &in.Masters, &out.Masters
@@ -191,6 +187,13 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 		in, out := &in.Nodes, &out.Nodes
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.DeployToolsExternalVars != nil {
+		in, out := &in.DeployToolsExternalVars, &out.DeployToolsExternalVars
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 	out.Ratio = in.Ratio
 	return
@@ -292,12 +295,15 @@ func (in *Config) DeepCopyInto(out *Config) {
 		in, out := &in.Values, &out.Values
 		*out = make(map[string][]byte, len(*in))
 		for key, val := range *in {
+			var outVal []byte
 			if val == nil {
 				(*out)[key] = nil
 			} else {
-				(*out)[key] = make([]byte, len(val))
-				copy((*out)[key], val)
+				in, out := &val, &outVal
+				*out = make([]byte, len(*in))
+				copy(*out, *in)
 			}
+			(*out)[key] = outVal
 		}
 	}
 	return
