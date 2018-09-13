@@ -77,13 +77,13 @@ const (
 	ResourceSuspended ResourcePhase = "Suspended"
 	// ResourcePending only for CronJob, means the CronJob has no Job histories
 	ResourcePending ResourcePhase = "Pending"
-	// ResourceProcessing means that:
+	// ResourceProgressing means that:
 	// - Deployment, StatefulSet, DaemonSet: all pods are updated, and the replicas
 	//   are in sacling
 	// - Job: the succeeded pod number doesn't meet the desired completion number
 	// - CronJob: there are unfinished Jobs beloings to the CronJob
 	// - PVC: the pvc is not bound
-	ResourceProcessing ResourcePhase = "Processing"
+	ResourceProgressing ResourcePhase = "Progressing"
 	// ResourceUpdating means:
 	// - Deployment, StatefulSet, DaemonSet: the system is working to deal with the
 	//   resource's updating request there are some old pods mixed with the

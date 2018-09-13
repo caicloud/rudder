@@ -44,7 +44,7 @@ func JudgeCronJob(factory listerfactory.ListerFactory, obj runtime.Object) (rele
 	}
 	if len(cronjob.Status.Active) > 0 {
 		return releaseapi.ResourceStatus{
-			Phase:   releaseapi.ResourceProcessing,
+			Phase:   releaseapi.ResourceProgressing,
 			Reason:  "JobRunning",
 			Message: fmt.Sprintf("there are %v jobs are running", len(cronjob.Status.Active)),
 		}, nil

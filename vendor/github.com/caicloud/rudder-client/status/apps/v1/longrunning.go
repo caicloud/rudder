@@ -26,7 +26,7 @@ func JudgeLongRunning(desiredReplicas int32, oldPods, updatePods []*v1.Pod, even
 			}
 		}
 		return releaseapi.ResourceStatus{
-			Phase:  releaseapi.ResourceProcessing,
+			Phase:  releaseapi.ResourceProgressing,
 			Reason: "ZeroReplicas",
 		}
 	}
@@ -78,6 +78,6 @@ func JudgeLongRunning(desiredReplicas int32, oldPods, updatePods []*v1.Pod, even
 
 	// Progressing
 	return releaseapi.ResourceStatus{
-		Phase: releaseapi.ResourceProcessing,
+		Phase: releaseapi.ResourceProgressing,
 	}
 }
