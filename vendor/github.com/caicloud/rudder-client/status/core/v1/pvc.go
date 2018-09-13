@@ -20,5 +20,5 @@ func JudgePVC(factory listerfactory.ListerFactory, obj runtime.Object) (releasea
 	case corev1.ClaimLost:
 		return releaseapi.ResourceStatusFrom(releaseapi.ResourceFailed), nil
 	}
-	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProcessing), nil
+	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProgressing), nil
 }
