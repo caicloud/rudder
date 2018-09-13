@@ -306,7 +306,7 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 			if err != nil && !errors.IsNotFound(err) {
 				return err
 			}
-			status := releaseapi.ResourceStatusFrom(releaseapi.ResourceProcessing)
+			status := releaseapi.ResourceStatusFrom(releaseapi.ResourceProgressing)
 			if err == nil {
 				// There is no gvk in runningObj. We set it here.
 				runningObj.GetObjectKind().SetGroupVersionKind(gvk)
