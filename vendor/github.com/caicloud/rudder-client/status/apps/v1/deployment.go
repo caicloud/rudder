@@ -34,12 +34,12 @@ func JudgeDeployment(factory listerfactory.ListerFactory, obj runtime.Object) (r
 		return releaseapi.ResourceStatusFrom(""), err
 	}
 	rs := getUpdatedReplicaSetForDeployment(deployment, rsList)
-	// no rs found, we think it is processing
+	// no rs found, we think it is Progressing
 	if rs == nil {
 		message := fmt.Sprintf("No updated ReplicaSet is found for Deployment %v/%v", deployment.Namespace, deployment.Name)
 		glog.V(3).Info(message)
 		return releaseapi.ResourceStatus{
-			Phase:   releaseapi.ResourceProcessing,
+			Phase:   releaseapi.ResourceProgressing,
 			Reason:  "NoReplicaSet",
 			Message: message,
 		}, nil

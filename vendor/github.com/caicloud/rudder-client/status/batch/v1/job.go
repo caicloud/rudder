@@ -36,5 +36,5 @@ func JudgeJob(factory listerfactory.ListerFactory, obj runtime.Object) (releasea
 		}
 	}
 
-	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProcessing), nil
+	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProgressing), nil
 }

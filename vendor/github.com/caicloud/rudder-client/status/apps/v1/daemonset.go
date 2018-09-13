@@ -36,7 +36,7 @@ func JudgeDaemonSet(factory listerfactory.ListerFactory, obj runtime.Object) (re
 	}
 	if history == nil {
 		return releaseapi.ResourceStatus{
-			Phase:  releaseapi.ResourceProcessing,
+			Phase:  releaseapi.ResourceProgressing,
 			Reason: "NoHistory",
 		}, nil
 	}

@@ -46,6 +46,6 @@ func JudgeReplicaSet(factory listerfactory.ListerFactory, obj runtime.Object) (r
 		}
 		return releaseapi.ResourceStatusFrom(releaseapi.ResourceRunning), nil
 	}
-	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProcessing), nil
+	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProgressing), nil
 
 }
