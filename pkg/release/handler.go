@@ -3,7 +3,6 @@ package release
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/rudder/pkg/kube"
@@ -81,12 +80,8 @@ FOR:
 		case _ = <-ctx.Done():
 			break FOR
 		case rel := <-getter.Get():
-			if !(target != nil && rel.Spec.RollbackTo == nil &&
-				target.Spec.Config == rel.Spec.Config &&
-				reflect.DeepEqual(target.Spec.Template, rel.Spec.Template)) {
-				// Config was changed. Add it to queue.
-				queue.Forget(target.Name)
-			}
+			// ignore all that not synchronized items
+			queue.Forget(rel.Name)
 			target = rel
 			queue.Add(target.Name)
 		}
