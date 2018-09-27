@@ -1,8 +1,6 @@
 package status
 
 import (
-	"strings"
-
 	"k8s.io/api/core/v1"
 )
 
@@ -12,9 +10,6 @@ const (
 	// on the node it is (was) running.
 	// copy from k8s.io/kubernetes/pkg/util/node
 	NodeUnreachablePodReason = "NodeLost"
-
-	// EventUnhealthy describes Unhealthy pod event
-	EventUnhealthy = "Unhealthy"
 )
 
 // These are the valid phase of pod.
@@ -85,47 +80,3 @@ const (
 	containerTerminated containerState = "terminated"
 	containerRunning    containerState = "running"
 )
-
-// SortEventByLastTimestamp sorts event by lastTimestamp
-type eventByLastTimestamp []*v1.Event
-
-func (x eventByLastTimestamp) Len() int {
-	return len(x)
-}
-
-func (x eventByLastTimestamp) Swap(i, j int) {
-	x[i], x[j] = x[j], x[i]
-}
-
-func (x eventByLastTimestamp) Less(i, j int) bool {
-	it := x[i].LastTimestamp
-	jt := x[j].LastTimestamp
-	return it.After(jt.Time)
-}
-
-type eventCase struct {
-	eventType string
-	reason    string
-	msgKeys   []string
-}
-
-func (c *eventCase) match(event *v1.Event) bool {
-	if event == nil {
-		return false
-	}
-	if c.eventType != event.Type {
-		return false
-	}
-
-	if c.reason != event.Reason {
-		return false
-	}
-
-	for _, kw := range c.msgKeys {
-		if strings.Contains(event.Message, kw) {
-			// match
-			return true
-		}
-	}
-	return false
-}
