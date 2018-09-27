@@ -13,6 +13,7 @@ import (
 	"github.com/caicloud/clientset/util/syncqueue"
 
 	informerrelease "github.com/caicloud/clientset/informers/release/v1alpha1"
+	"github.com/caicloud/clientset/kubernetes"
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
 	listerrelease "github.com/caicloud/clientset/listers/release/v1alpha1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
@@ -46,6 +47,7 @@ type StatusController struct {
 }
 
 func NewStatusController(
+	kubeClient kubernetes.Interface,
 	codec kube.Codec,
 	store store.IntegrationStore,
 	releaseClient releasev1alpha1.ReleaseV1alpha1Interface,
@@ -66,7 +68,7 @@ func NewStatusController(
 		factory:       factory,
 		releaseLister: releaseInformer.Lister(),
 		hasSynced:     []cache.InformerSynced{releaseInformer.Informer().HasSynced},
-		umpire:        status.NewUmpire(listerfactory.NewListerFactoryFromInformer(store.SharedInformerFactory())),
+		umpire:        status.NewUmpire(listerfactory.NewListerFactoryFromInformer(kubeClient, store.SharedInformerFactory())),
 		resources:     resources,
 	}
 
