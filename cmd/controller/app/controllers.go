@@ -66,6 +66,7 @@ func startReleaseController(ctx ControllerContext) error {
 
 func startStatusController(ctx ControllerContext) error {
 	statusController, err := status.NewStatusController(
+		ctx.KubeClient,
 		ctx.Codec,
 		ctx.InformerStore,
 		ctx.KubeClient.ReleaseV1alpha1(),

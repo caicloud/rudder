@@ -11,18 +11,18 @@ import (
 )
 
 func JudgeReplicaSet(factory listerfactory.ListerFactory, obj runtime.Object) (releaseapi.ResourceStatus, error) {
-	resource, ok := obj.(*appsv1.ReplicaSet)
+	rs, ok := obj.(*appsv1.ReplicaSet)
 	if !ok {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("unknown type for replicaset: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}
 	if factory == nil {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("receive nil ListerFactory")
 	}
-	if resource == nil {
+	if rs == nil {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("replicaset can not be nil")
 	}
 
-	for _, c := range resource.Status.Conditions {
+	for _, c := range rs.Status.Conditions {
 		if c.Type == appsv1.ReplicaSetReplicaFailure &&
 			c.Status == corev1.ConditionTrue {
 			return releaseapi.ResourceStatus{
@@ -35,9 +35,9 @@ func JudgeReplicaSet(factory listerfactory.ListerFactory, obj runtime.Object) (r
 
 	desiredReplicas := int32(0)
 	// use AvailableReplicas rather than status.replicas
-	currentReplicas := resource.Status.AvailableReplicas
-	if resource.Spec.Replicas != nil {
-		desiredReplicas = *resource.Spec.Replicas
+	currentReplicas := rs.Status.AvailableReplicas
+	if rs.Spec.Replicas != nil {
+		desiredReplicas = *rs.Spec.Replicas
 	}
 
 	if desiredReplicas == currentReplicas {
@@ -47,5 +47,4 @@ func JudgeReplicaSet(factory listerfactory.ListerFactory, obj runtime.Object) (r
 		return releaseapi.ResourceStatusFrom(releaseapi.ResourceRunning), nil
 	}
 	return releaseapi.ResourceStatusFrom(releaseapi.ResourceProgressing), nil
-
 }

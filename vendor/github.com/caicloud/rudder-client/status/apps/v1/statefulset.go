@@ -2,13 +2,23 @@ package v1
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/caicloud/clientset/listerfactory"
+	listerfactorycorev1 "github.com/caicloud/clientset/listerfactory/core/v1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+	"github.com/caicloud/clientset/util/event"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+)
+
+var (
+	ssetErrorEventCases = []event.EventCase{
+		// Liveness and Readiness probe failed
+		{corev1.EventTypeWarning, event.FailedCreatePodReason, []string{"exceeded quota"}},
+	}
 )
 
 func JudgeStatefulSet(factory listerfactory.ListerFactory, obj runtime.Object) (releaseapi.ResourceStatus, error) {
@@ -36,10 +46,42 @@ func JudgeStatefulSet(factory listerfactory.ListerFactory, obj runtime.Object) (
 		}
 		oldPods = append(oldPods, pod)
 	}
-	events, err := factory.Core().V1().Events().Events(statefulset.Namespace).List(labels.Everything())
+
+	events, err := listerfactorycorev1.NewEventLister(factory.Client()).Events(statefulset.Namespace).List(labels.Everything())
 	if err != nil {
 		return releaseapi.ResourceStatusFrom(""), nil
 	}
+	lastEvent := getLatestEventForStatefulSet(statefulset, events)
+	for _, c := range ssetErrorEventCases {
+		if c.Match(lastEvent) {
+			return releaseapi.ResourceStatus{
+				Phase:   releaseapi.ResourceFailed,
+				Reason:  lastEvent.Reason,
+				Message: lastEvent.Message,
+			}, nil
+			break
+		}
+	}
 
 	return JudgeLongRunning(*statefulset.Spec.Replicas, oldPods, updatePods, events), nil
+}
+
+func getLatestEventForStatefulSet(sset *appsv1.StatefulSet, events []*corev1.Event) *corev1.Event {
+	if len(events) == 0 {
+		return nil
+	}
+	ret := make([]*corev1.Event, 0)
+	for _, e := range events {
+		if e.InvolvedObject.Kind == "StatefulSet" &&
+			e.InvolvedObject.Name == sset.Name &&
+			e.InvolvedObject.Namespace == sset.Namespace &&
+			e.InvolvedObject.UID == sset.UID {
+			ret = append(ret, e)
+		}
+	}
+	if len(ret) == 0 {
+		return nil
+	}
+	sort.Sort(event.EventByLastTimestamp(ret))
+	return ret[0]
 }

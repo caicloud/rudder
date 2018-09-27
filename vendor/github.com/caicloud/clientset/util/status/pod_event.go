@@ -3,13 +3,15 @@ package status
 import (
 	"sort"
 
+	"github.com/caicloud/clientset/util/event"
+
 	"k8s.io/api/core/v1"
 )
 
 var (
-	errorEventCases = []eventCase{
+	errorEventCases = []event.EventCase{
 		// Liveness and Readiness probe failed
-		{v1.EventTypeWarning, EventUnhealthy, []string{"probe failed"}},
+		{v1.EventTypeWarning, event.ContainerUnhealthy, []string{"probe failed"}},
 	}
 )
 
@@ -22,12 +24,12 @@ func JudgePodStatus(pod *v1.Pod, events []*v1.Event) PodStatus {
 
 	status := judgePod(pod)
 	// only the latest event is useful
-	event := getLatestEventForPod(pod, events)
+	e := getLatestEventForPod(pod, events)
 	for _, c := range errorEventCases {
-		if c.match(event) {
+		if c.Match(e) {
 			status.Phase = PodError
-			status.Reason = event.Reason
-			status.Message = event.Message
+			status.Reason = e.Reason
+			status.Message = e.Message
 			break
 		}
 	}
@@ -52,12 +54,12 @@ func getLatestEventForPod(pod *v1.Pod, events []*v1.Event) *v1.Event {
 	}
 	ret := make([]*v1.Event, 0)
 
-	for _, event := range events {
-		if event.InvolvedObject.Kind == "Pod" &&
-			event.InvolvedObject.Name == pod.Name &&
-			event.InvolvedObject.Namespace == pod.Namespace &&
-			event.InvolvedObject.UID == pod.UID {
-			ret = append(ret, event)
+	for _, e := range events {
+		if e.InvolvedObject.Kind == "Pod" &&
+			e.InvolvedObject.Name == pod.Name &&
+			e.InvolvedObject.Namespace == pod.Namespace &&
+			e.InvolvedObject.UID == pod.UID {
+			ret = append(ret, e)
 		}
 	}
 
@@ -65,6 +67,6 @@ func getLatestEventForPod(pod *v1.Pod, events []*v1.Event) *v1.Event {
 		return nil
 	}
 
-	sort.Sort(eventByLastTimestamp(ret))
+	sort.Sort(event.EventByLastTimestamp(ret))
 	return ret[0]
 }
