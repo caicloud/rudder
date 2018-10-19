@@ -35,7 +35,7 @@
 
 [[projects]]
   branch = "release-1.10"
-  digest = "1:658a1136d9d4174251013e29bf5607bfdd08a9211699b8c86276733546faa858"
+  digest = "1:29f622c49110f9aace1248af30b42e843ceb335302a2b132dd22bf6d56fbe0b0"
   name = "github.com/caicloud/clientset"
   packages = [
     "informers",
@@ -135,11 +135,11 @@
     "util/syncqueue",
   ]
   pruneopts = "UT"
-  revision = "cc67a396134f4c887fe2aad0c9fed0d629fa50c6"
+  revision = "be334cae33fd0b891870e67c0f83c1d7d97f6302"
 
 [[projects]]
   branch = "master"
-  digest = "1:8de26e6cd65ae4e8912144d8ce7b1a2f0b95510041770c6fc4e6aba2c4a4e25a"
+  digest = "1:643ef4d80e2cfa54d07ef82fea14a6d94bc399ce14d78b8c8aae2dee28ff4d15"
   name = "github.com/caicloud/rudder-client"
   packages = [
     "status",
@@ -150,7 +150,7 @@
     "status/universal",
   ]
   pruneopts = "UT"
-  revision = "92fe16cbf223b9e2c534a790e09adee46256f215"
+  revision = "49177033f90cd50faf4338a0e5efef902af6b6d3"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"

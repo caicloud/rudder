@@ -111,7 +111,19 @@ type ResourceStatus struct {
 	Phase   ResourcePhase `json:"phase,omitempty"`
 	Reason  string        `json:"reason,omitempty"`
 	Message string        `json:"message,omitempty"`
+	// if the resource, such as Deployment, controls some pods, the status statistics of pods
+	// will be filled in
+	PodStatistics *PodStatistics `json:"podStatistics,omitempty"`
 }
+
+// PodStatistics counts all the pod in all phase, and divided them into old and updated
+type PodStatistics struct {
+	OldPods     PodStatusCounter `json:"oldPods,omitempty"`
+	UpdatedPods PodStatusCounter `json:"updatedPods,omitempty"`
+}
+
+// PodStatusCounter is the pod status counter
+type PodStatusCounter map[v1.PodPhase]int32
 
 // ReleaseStatus describes the status of a release
 type ReleaseStatus struct {
@@ -123,7 +135,8 @@ type ReleaseStatus struct {
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Details contains all resources status of current release. The key
 	// should be a unique path.
-	Details map[string]ReleaseDetailStatus `json:"details,omitempty"`
+	Details       map[string]ReleaseDetailStatus `json:"details,omitempty"`
+	PodStatistics PodStatistics                  `json:"podStatistics,omitempty"`
 	// Conditions is an array of current observed release conditions.
 	Conditions []ReleaseCondition `json:"conditions,omitempty"`
 }
