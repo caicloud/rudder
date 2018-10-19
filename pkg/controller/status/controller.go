@@ -7,20 +7,18 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/caicloud/clientset/listerfactory"
-	"github.com/caicloud/rudder/pkg/storage"
-
-	"github.com/caicloud/clientset/util/syncqueue"
-
 	informerrelease "github.com/caicloud/clientset/informers/release/v1alpha1"
 	"github.com/caicloud/clientset/kubernetes"
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
+	"github.com/caicloud/clientset/listerfactory"
 	listerrelease "github.com/caicloud/clientset/listers/release/v1alpha1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+	"github.com/caicloud/clientset/util/syncqueue"
 	"github.com/caicloud/rudder-client/status"
 	statusinterface "github.com/caicloud/rudder-client/status/universal"
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/render"
+	"github.com/caicloud/rudder/pkg/storage"
 	"github.com/caicloud/rudder/pkg/store"
 	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,7 +66,7 @@ func NewStatusController(
 		factory:       factory,
 		releaseLister: releaseInformer.Lister(),
 		hasSynced:     []cache.InformerSynced{releaseInformer.Informer().HasSynced},
-		umpire:        status.NewUmpire(listerfactory.NewListerFactoryFromInformer(kubeClient, store.SharedInformerFactory())),
+		umpire:        status.NewUmpire(listerfactory.NewListerFactoryFromInformer(store.SharedInformerFactory())),
 		resources:     resources,
 	}
 
@@ -236,7 +234,7 @@ func (sc *StatusController) syncRelease(obj interface{}) error {
 		return nil
 	}
 
-	result, err := sc.detect(release)
+	result, podStatistics, err := sc.detect(release)
 	if err != nil {
 		glog.Errorf("Can't detect status for %s/%s: %v", release.Namespace, release.Name, err)
 		return err
@@ -270,23 +268,28 @@ func (sc *StatusController) syncRelease(obj interface{}) error {
 			}
 			release.Status.Details[key] = status
 		}
+		release.Status.PodStatistics = *podStatistics
 	})
 
 	return nil
 }
 
-func (sc *StatusController) detect(release *releaseapi.Release) (map[string]releaseapi.ReleaseDetailStatus, error) {
+func (sc *StatusController) detect(release *releaseapi.Release) (map[string]releaseapi.ReleaseDetailStatus, *releaseapi.PodStatistics, error) {
 	if release.Status.Manifest == "" {
 		// No resource
-		return map[string]releaseapi.ReleaseDetailStatus{}, nil
+		return map[string]releaseapi.ReleaseDetailStatus{}, nil, nil
 	}
 	carrier, err := render.CarrierForManifest(release.Status.Manifest)
 	if err != nil {
 		glog.Errorf("Can't parse manifest for %s/%s: %v", release.Namespace, release.Name, err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	details := make(map[string]releaseapi.ReleaseDetailStatus)
+	podStatistics := releaseapi.PodStatistics{
+		OldPods:     make(releaseapi.PodStatusCounter),
+		UpdatedPods: make(releaseapi.PodStatusCounter),
+	}
 	err = carrier.Run(context.Background(), render.PositiveOrder, func(ctx context.Context, node string, resources []string) error {
 		detail := releaseapi.ReleaseDetailStatus{
 			Path:      node,
@@ -309,6 +312,7 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 				return err
 			}
 			status := releaseapi.ResourceStatusFrom(releaseapi.ResourceProgressing)
+			var statistics *releaseapi.PodStatistics
 			if err == nil {
 				// There is no gvk in runningObj. We set it here.
 				runningObj.GetObjectKind().SetGroupVersionKind(gvk)
@@ -318,7 +322,18 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 					glog.Errorf("Can't decode resource for %s: %v", node, err)
 					status = releaseapi.ResourceStatusFrom(releaseapi.ResourceFailed)
 				}
+				statistics = status.PodStatistics
 			}
+
+			if statistics != nil {
+				for k, v := range statistics.OldPods {
+					podStatistics.OldPods[k] += v
+				}
+				for k, v := range statistics.UpdatedPods {
+					podStatistics.UpdatedPods[k] += v
+				}
+			}
+
 			key := gvk.String()
 			counter, ok := detail.Resources[key]
 			if !ok {
@@ -337,9 +352,9 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 	})
 	if err != nil {
 		glog.Errorf("Can't run resources for %s/%s: %v", release.Namespace, release.Name, err)
-		return nil, err
+		return nil, nil, err
 	}
-	return details, nil
+	return details, &podStatistics, nil
 }
 
 // kindValidator and nameValidator validates kind and name of a key
