@@ -4,16 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"sort"
 
 	"github.com/caicloud/clientset/listerfactory"
-	listerfactorycorev1 "github.com/caicloud/clientset/listerfactory/core/v1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/clientset/util/event"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 )
@@ -30,58 +27,65 @@ func JudgeDaemonSet(factory listerfactory.ListerFactory, obj runtime.Object) (re
 	if !ok {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("unknown type for daemonset: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}
-	if factory == nil {
-		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("receive nil ListerFactory")
-	}
 	if daemonset == nil {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("daemonset can not be nil")
 	}
+
+	lr, err := newLongRunning(factory, daemonset)
+	if err != nil {
+		return releaseapi.ResourceStatusFrom(""), err
+	}
+	return lr.Judge()
+
+}
+
+type daemonsetLongRunning struct {
+	daemonset *appsv1.DaemonSet
+}
+
+func newDaemonSetLongRunning(daemonset *appsv1.DaemonSet) LongRunning {
+	return &daemonsetLongRunning{daemonset}
+}
+
+func (d *daemonsetLongRunning) UpdatedRevision(factory listerfactory.ListerFactory) (interface{}, string, error) {
+	daemonset := d.daemonset
+
 	historyList, err := getHistoriesForDaemonSet(factory.Apps().V1().ControllerRevisions(), daemonset)
 	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), nil
+		return nil, "", err
 	}
 	history, err := getUpdateHistoryForDaemonSet(daemonset, historyList)
 	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), nil
+		return nil, "", err
 	}
 	if history == nil {
-		return releaseapi.ResourceStatus{
-			Phase:  releaseapi.ResourceProgressing,
-			Reason: "NoHistory",
-		}, nil
+		return nil, "", ErrUpdatedRevisionNotExists
 	}
 
-	podList, err := getPodsFor(factory.Core().V1().Pods(), daemonset)
-	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), nil
-	}
-	oldPods := make([]*corev1.Pod, 0)
-	updatePods := make([]*corev1.Pod, 0)
-	for _, pod := range podList {
-		if pod.Labels[appsv1.DefaultDaemonSetUniqueLabelKey] == history.Labels[appsv1.DefaultDaemonSetUniqueLabelKey] {
-			updatePods = append(updatePods, pod)
-			continue
-		}
-		oldPods = append(oldPods, pod)
-	}
+	return history, history.Labels[appsv1.DefaultDaemonSetUniqueLabelKey], nil
+}
 
-	events, err := listerfactorycorev1.NewEventLister(factory.Client()).Events(daemonset.Namespace).List(labels.Everything())
-	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), nil
-	}
-	lastEvent := getLatestEventForDaemonSet(daemonset, events)
+func (d *daemonsetLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
+	return pod.Labels[appsv1.DefaultDaemonSetUniqueLabelKey] == updatedRevisionKey
+}
+
+func (d *daemonsetLongRunning) Predict(updatedRevision interface{}, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
+	lastEvent := getLatestEventFor(d.daemonset.GroupVersionKind().Kind, d.daemonset, events)
 	for _, c := range dsetErrorEventCases {
 		if c.Match(lastEvent) {
-			return releaseapi.ResourceStatus{
+			return &releaseapi.ResourceStatus{
 				Phase:   releaseapi.ResourceFailed,
 				Reason:  lastEvent.Reason,
 				Message: lastEvent.Message,
 			}, nil
-			break
 		}
 	}
+	return nil, nil
+}
+
+func (d *daemonsetLongRunning) DesiredReplics() int32 {
 	// daemonset has no desired replicas, its value should always be 0
-	return JudgeLongRunning(0, oldPods, updatePods, events), nil
+	return 0
 }
 
 func getHistoriesForDaemonSet(historyLister appslisters.ControllerRevisionLister, daemonset *appsv1.DaemonSet) ([]*appsv1.ControllerRevision, error) {
@@ -89,7 +93,7 @@ func getHistoriesForDaemonSet(historyLister appslisters.ControllerRevisionLister
 	if err != nil {
 		return nil, fmt.Errorf("invalid label selector: %v", err)
 	}
-	// If a deployment with a nil or empty selector creeps in, it should match nothing, not everything.
+	// If a daemonset with a nil or empty selector creeps in, it should match nothing, not everything.
 	if selector.Empty() {
 		return nil, nil
 	}
@@ -136,25 +140,4 @@ func getPatch(ds *appsv1.DaemonSet) ([]byte, error) {
 	objCopy["spec"] = specCopy
 	patch, err := json.Marshal(objCopy)
 	return patch, err
-}
-
-func getLatestEventForDaemonSet(dset *appsv1.DaemonSet, events []*corev1.Event) *corev1.Event {
-	if len(events) == 0 {
-		return nil
-	}
-	ret := make([]*corev1.Event, 0)
-
-	for _, e := range events {
-		if e.InvolvedObject.Kind == "DaemonSet" &&
-			e.InvolvedObject.Name == dset.Name &&
-			e.InvolvedObject.Namespace == dset.Namespace &&
-			e.InvolvedObject.UID == dset.UID {
-			ret = append(ret, e)
-		}
-	}
-	if len(ret) == 0 {
-		return nil
-	}
-	sort.Sort(event.EventByLastTimestamp(ret))
-	return ret[0]
 }
