@@ -47,13 +47,11 @@ func NewFilteredListerFactoryFromClient(client kubernetes.Interface, tweakListOp
 }
 
 type informerListerFactory struct {
-	client  kubernetes.Interface
 	factory informers.SharedInformerFactory
 }
 
-func NewListerFactoryFromInformer(client kubernetes.Interface, factory informers.SharedInformerFactory) ListerFactory {
+func NewListerFactoryFromInformer(factory informers.SharedInformerFactory) ListerFactory {
 	return &informerListerFactory{
-		client:  client,
 		factory: factory,
 	}
 }
@@ -61,8 +59,6 @@ func NewListerFactoryFromInformer(client kubernetes.Interface, factory informers
 // ListerFactory provides listers for resources in all known
 // API group versions.
 type ListerFactory interface {
-	Client() kubernetes.Interface
-
 	Admissionregistration() admissionregistration.Interface
 	Apps() apps.Interface
 	Autoscaling() autoscaling.Interface
@@ -77,10 +73,6 @@ type ListerFactory interface {
 	Scheduling() scheduling.Interface
 	Settings() settings.Interface
 	Storage() storage.Interface
-}
-
-func (f *clientListerFactory) Client() kubernetes.Interface {
-	return f.client
 }
 
 func (f *clientListerFactory) Admissionregistration() admissionregistration.Interface {
@@ -137,10 +129,6 @@ func (f *clientListerFactory) Settings() settings.Interface {
 
 func (f *clientListerFactory) Storage() storage.Interface {
 	return storage.New(f.client, f.tweakListOptions)
-}
-
-func (f *informerListerFactory) Client() kubernetes.Interface {
-	return f.client
 }
 
 func (f *informerListerFactory) Admissionregistration() admissionregistration.Interface {

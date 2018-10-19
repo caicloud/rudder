@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/golang/glog"
-
 	"github.com/caicloud/clientset/listerfactory"
-	listerfactorycorev1 "github.com/caicloud/clientset/listerfactory/core/v1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 )
@@ -23,68 +19,72 @@ func JudgeDeployment(factory listerfactory.ListerFactory, obj runtime.Object) (r
 	if !ok {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("unknown type for deployment: %s", obj.GetObjectKind().GroupVersionKind().String())
 	}
-	if factory == nil {
-		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("receive nil ListerFactory")
-	}
 	if deployment == nil {
 		return releaseapi.ResourceStatusFrom(""), fmt.Errorf("deployment can not be nil")
 	}
 
-	rsList, err := getReplicaSetsforDeployment(factory.Apps().V1().ReplicaSets(), deployment)
+	lr, err := newLongRunning(factory, deployment)
 	if err != nil {
 		return releaseapi.ResourceStatusFrom(""), err
 	}
-	rs := getUpdatedReplicaSetForDeployment(deployment, rsList)
-	// no rs found, we think it is Progressing
-	if rs == nil {
-		message := fmt.Sprintf("No updated ReplicaSet is found for Deployment %v/%v", deployment.Namespace, deployment.Name)
-		glog.V(3).Info(message)
-		return releaseapi.ResourceStatus{
-			Phase:   releaseapi.ResourceProgressing,
-			Reason:  "NoReplicaSet",
-			Message: message,
-		}, nil
-	}
+	return lr.Judge()
+}
 
+type deploymentLongRunning struct {
+	deployment *appsv1.Deployment
+}
+
+func newDeploymetLongRunning(deployment *appsv1.Deployment) LongRunning {
+	return &deploymentLongRunning{deployment}
+}
+
+func (d *deploymentLongRunning) UpdatedRevision(factory listerfactory.ListerFactory) (interface{}, string, error) {
+	deployment := d.deployment
+
+	rsList, err := getReplicaSetsforDeployment(factory.Apps().V1().ReplicaSets(), deployment)
+	if err != nil {
+		return nil, "", err
+	}
+	rs := getUpdatedReplicaSetForDeployment(deployment, rsList)
+	if rs == nil {
+		return nil, "", ErrUpdatedRevisionNotExists
+	}
+	return rs, string(rs.UID), nil
+}
+
+func (d *deploymentLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
+	latest := false
+	for _, owner := range pod.OwnerReferences {
+		if string(owner.UID) == updatedRevisionKey {
+			latest = true
+		}
+	}
+	return latest
+}
+
+func (d *deploymentLongRunning) Predict(updatedRevision interface{}, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
+	rs, ok := updatedRevision.(*appsv1.ReplicaSet)
+	if !ok {
+		return nil, fmt.Errorf("the updatedRevision must be ReplicaSet")
+	}
 	// a replica set when one of its pods fails to be created
 	// due to insufficient quota, limit ranges, pod security policy, node selectors, etc. or deleted
 	// due to kubelet being down or finalizers are failing.
-	rsStatus, err := JudgeReplicaSet(factory, rs)
-	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), err
-	}
-	if rsStatus.Phase == releaseapi.ResourceFailed {
-		return rsStatus, nil
-	}
-
-	// get pods
-	podList, err := getPodsFor(factory.Core().V1().Pods(), deployment)
-	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), err
-	}
-	oldPods := make([]*corev1.Pod, 0)
-	updatePods := make([]*corev1.Pod, 0)
-	for _, pod := range podList {
-		latest := false
-		for _, owner := range pod.OwnerReferences {
-			if owner.UID == rs.UID {
-				latest = true
-			}
-		}
-		if latest {
-			updatePods = append(updatePods, pod)
-		} else {
-			oldPods = append(oldPods, pod)
+	for _, c := range rs.Status.Conditions {
+		if c.Type == appsv1.ReplicaSetReplicaFailure &&
+			c.Status == corev1.ConditionTrue {
+			return &releaseapi.ResourceStatus{
+				Phase:   releaseapi.ResourceFailed,
+				Reason:  c.Reason,
+				Message: c.Message,
+			}, nil
 		}
 	}
+	return nil, nil
+}
 
-	events, err := listerfactorycorev1.NewEventLister(factory.Client()).Events(deployment.Namespace).List(labels.Everything())
-	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), nil
-	}
-
-	glog.V(5).Infof("deployment %v, desired %v, oldPods %v updatePods %v events %v", deployment.Name, *deployment.Spec.Replicas, len(oldPods), len(updatePods), len(events))
-	return JudgeLongRunning(*deployment.Spec.Replicas, oldPods, updatePods, events), nil
+func (d *deploymentLongRunning) DesiredReplics() int32 {
+	return *d.deployment.Spec.Replicas
 }
 
 func getReplicaSetsforDeployment(rslister appslisters.ReplicaSetLister, deployment *appsv1.Deployment) ([]*appsv1.ReplicaSet, error) {
