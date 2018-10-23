@@ -2,7 +2,6 @@ package release
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
@@ -56,9 +55,13 @@ func (rc *releaseContext) handle(ctx context.Context, backend storage.ReleaseSto
 			// In the past, call handleRelease to judge and select an handler for release.
 			// Now just apply the release.
 			if err := rc.applyRelease(backend, target); err != nil {
-				// Something is wrong. Retry it with rate limit.
-				queue.AddRateLimited(target.Name)
-				glog.Errorf("Can't apply release %s/%s: %v", target.Namespace, target.Name, err)
+				if queue.NumRequeues(target.Name) < 3 {
+					// Something is wrong. Retry it with rate limit.
+					queue.AddRateLimited(target.Name)
+					glog.Errorf("Can't apply release %s/%s: %v, retry", target.Namespace, target.Name, err)
+				} else {
+					glog.Warningf("Dropping release %s/%s", target.Namespace, target.Name)
+				}
 			} else {
 				glog.V(4).Infof("Successfully handled release: %s/%s", target.Namespace, target.Name)
 				// Everything is ok. Save target.
@@ -84,62 +87,6 @@ FOR:
 		}
 	}
 	queue.ShutDown()
-	// Delete release resources.
-	// if err := rc.deleteRelease(backend, target); err != nil {
-	//     glog.Errorf("Can't delete release %s/%s: %v", target.Namespace, target.Name, err)
-	// }
 
 	glog.V(2).Infof("Stopped handler: %s", getter.Key())
-}
-
-func (rc *releaseContext) handleRelease(backend storage.ReleaseStorage, origin, target *releaseapi.Release) error {
-	// create/rollback/update resources
-	action, err := rc.judge(backend, origin, target)
-	if err != nil {
-		return err
-	}
-	switch action {
-	case ReleaseCreate:
-		// Create
-		return rc.createRelease(backend, target)
-	case ReleaseRollback:
-		// Rollback
-		return rc.rollbackRelease(backend, target)
-	case ReleaseUpdate:
-		// Update
-		return rc.updateRelease(backend, target)
-	}
-	return nil
-}
-
-func (rc *releaseContext) judge(backend storage.ReleaseStorage, oldOne *releaseapi.Release, newOne *releaseapi.Release) (ReleaseAction, error) {
-	checked, err := rc.judgeNothing(backend, oldOne, newOne)
-	if err != nil {
-		return "", err
-	}
-	if checked {
-		return ReleaseNothing, nil
-	}
-	checked, err = rc.judgeCreation(backend, oldOne, newOne)
-	if err != nil {
-		return "", err
-	}
-	if checked {
-		return ReleaseCreate, nil
-	}
-	checked, err = rc.judgeRollback(backend, oldOne, newOne)
-	if err != nil {
-		return "", err
-	}
-	if checked {
-		return ReleaseRollback, nil
-	}
-	checked, err = rc.judgeUpdate(backend, oldOne, newOne)
-	if err != nil {
-		return "", err
-	}
-	if checked {
-		return ReleaseUpdate, nil
-	}
-	return "", fmt.Errorf("unknown release action: %s/%s", newOne.Namespace, newOne.Name)
 }
