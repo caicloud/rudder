@@ -110,7 +110,7 @@ func (d *longRunning) Pods(updatedRevisionKey string) (updated, old []HyperPod, 
 
 // [Note] DaemonSet has no desired replicas in spec, so desiredReplicas should always be 0
 // we only use the desiredReplicas to judge whether the long running workload is Suspended
-func (d *longRunning) judge(desiredReplicas int32, oldPods, updatePods []HyperPod) releaseapi.ResourceStatus {
+func (d *longRunning) judge(desiredReplicas int32, updatePods, oldPods []HyperPod) releaseapi.ResourceStatus {
 	// get updated and old replicas
 	updateReplicas := len(updatePods)
 	oldReplicas := len(oldPods)
@@ -152,7 +152,7 @@ func (d *longRunning) judge(desiredReplicas int32, oldPods, updatePods []HyperPo
 	// if one of old pods if in Abnormal, the Resource is Failed
 	// otherwise it is in Updating
 	if oldReplicas > 0 {
-		for _, pod := range updatePods {
+		for _, pod := range oldPods {
 			podStatus := pod.Status
 			if podStatus.State == podstatus.PodAbnormal {
 				return releaseapi.ResourceStatus{
