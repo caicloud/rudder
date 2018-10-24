@@ -132,13 +132,13 @@ func NewStatusController(
 	// init pod handler
 	factory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			sc.enqueuePod(obj)
+			sc.enqueueAccessor(obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			sc.enqueuePod(newObj)
+			sc.enqueueAccessor(newObj)
 		},
 		DeleteFunc: func(obj interface{}) {
-			sc.enqueuePod(obj)
+			sc.enqueueAccessor(obj)
 		},
 	})
 	sc.hasSynced = append(sc.hasSynced,
