@@ -161,8 +161,8 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 			}
 		} else {
 			// Update
-			if c.own(options.OwnerReferences, existence) ||
-				(options.Checker != nil && options.Checker(obj)) {
+			okind, refs := c.judgeOwnKind(options.OwnerReferences, existence)
+			if okind == equalOwn || (options.Checker != nil && options.Checker(obj)) {
 				if err := apply.Apply(gvk, existence, obj); err != nil {
 					return err
 				}
@@ -178,12 +178,14 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 					}
 					layer.Updated(result)
 				}
+			} else if okind == subOwn {
+				glog.Warningf("%s/%s(%s) is belong to current owners %v, but there are others %v tracking on it",
+					namespace, accessor.GetName(), gvk.Kind, options.OwnerReferences, refs)
 			} else {
-				glog.Errorf("%+v, %v", existence, err)
+				glog.Errorf("%+v, owners: %+v, %v", existence, refs, err)
 				// Conflict
 				return fmt.Errorf("%s/%s(%s) is not belong to current owner %v",
-					namespace, accessor.GetName(),
-					gvk.Kind, options.OwnerReferences)
+					namespace, accessor.GetName(), gvk.Kind, options.OwnerReferences)
 			}
 		}
 	}
@@ -450,4 +452,44 @@ func (c *client) own(refs []metav1.OwnerReference, obj runtime.Object) bool {
 		}
 	}
 	return true
+}
+
+type OwnKind string
+
+const (
+	equalOwn OwnKind = "equal"
+	subOwn   OwnKind = "sub"
+	diffOwn  OwnKind = "diff"
+)
+
+// judgeOwnKind checks which kind of OwnKind obj about refs.
+func (c *client) judgeOwnKind(refs []metav1.OwnerReference, obj runtime.Object) (OwnKind, []metav1.OwnerReference) {
+	accessor, err := c.codec.AccessorForObject(obj)
+	if err != nil {
+		return diffOwn, nil
+	}
+	references := accessor.GetOwnerReferences()
+	if refs == nil {
+		return diffOwn, references
+	}
+	count := 0
+	for _, ref := range refs {
+		for _, r := range references {
+			if ref.APIVersion == r.APIVersion &&
+				ref.Kind == r.Kind &&
+				ref.Name == r.Name &&
+				ref.UID == r.UID {
+				count++
+				break
+			}
+		}
+	}
+	switch {
+	case len(references) == len(refs) && count == len(refs):
+		return equalOwn, references
+	case len(references) > len(refs) && count == len(refs):
+		return subOwn, references
+	default:
+		return diffOwn, references
+	}
 }
