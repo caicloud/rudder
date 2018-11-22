@@ -11,10 +11,14 @@ import (
 
 	apiextensions "github.com/caicloud/clientset/informers/apiextensions"
 	apiregistration "github.com/caicloud/clientset/informers/apiregistration"
+	clever "github.com/caicloud/clientset/informers/clever"
 	cnetworking "github.com/caicloud/clientset/informers/cnetworking"
 	config "github.com/caicloud/clientset/informers/config"
+	dataset "github.com/caicloud/clientset/informers/dataset"
 	devops "github.com/caicloud/clientset/informers/devops"
 	loadbalance "github.com/caicloud/clientset/informers/loadbalance"
+	logging "github.com/caicloud/clientset/informers/logging"
+	model "github.com/caicloud/clientset/informers/model"
 	release "github.com/caicloud/clientset/informers/release"
 	resource "github.com/caicloud/clientset/informers/resource"
 	tenant "github.com/caicloud/clientset/informers/tenant"
@@ -84,10 +88,14 @@ type SharedInformerFactory interface {
 
 	Apiextensions() apiextensions.Interface
 	Apiregistration() apiregistration.Interface
+	Clever() clever.Interface
 	Cnetworking() cnetworking.Interface
 	Config() config.Interface
+	Dataset() dataset.Interface
 	Devops() devops.Interface
 	Loadbalance() loadbalance.Interface
+	Logging() logging.Interface
+	Model() model.Interface
 	Release() release.Interface
 	Resource() resource.Interface
 	Tenant() tenant.Interface
@@ -101,6 +109,10 @@ func (f *sharedInformerFactory) Apiregistration() apiregistration.Interface {
 	return apiregistration.New(f, f.namespace, f.tweakListOptions)
 }
 
+func (f *sharedInformerFactory) Clever() clever.Interface {
+	return clever.New(f, f.namespace, f.tweakListOptions)
+}
+
 func (f *sharedInformerFactory) Cnetworking() cnetworking.Interface {
 	return cnetworking.New(f, f.namespace, f.tweakListOptions)
 }
@@ -109,12 +121,24 @@ func (f *sharedInformerFactory) Config() config.Interface {
 	return config.New(f, f.namespace, f.tweakListOptions)
 }
 
+func (f *sharedInformerFactory) Dataset() dataset.Interface {
+	return dataset.New(f, f.namespace, f.tweakListOptions)
+}
+
 func (f *sharedInformerFactory) Devops() devops.Interface {
 	return devops.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Loadbalance() loadbalance.Interface {
 	return loadbalance.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Logging() logging.Interface {
+	return logging.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Model() model.Interface {
+	return model.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Release() release.Interface {

@@ -18,6 +18,12 @@ type Interface interface {
 	Configs() ConfigInformer
 	// Machines returns a MachineInformer.
 	Machines() MachineInformer
+	// MachineAutoScalingGroups returns a MachineAutoScalingGroupInformer.
+	MachineAutoScalingGroups() MachineAutoScalingGroupInformer
+	// RequirementGaps returns a RequirementGapInformer.
+	RequirementGaps() RequirementGapInformer
+	// Snapshots returns a SnapshotInformer.
+	Snapshots() SnapshotInformer
 	// StorageServices returns a StorageServiceInformer.
 	StorageServices() StorageServiceInformer
 	// StorageTypes returns a StorageTypeInformer.
@@ -50,6 +56,21 @@ func (v *version) Configs() ConfigInformer {
 // Machines returns a MachineInformer.
 func (v *version) Machines() MachineInformer {
 	return &machineInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// MachineAutoScalingGroups returns a MachineAutoScalingGroupInformer.
+func (v *version) MachineAutoScalingGroups() MachineAutoScalingGroupInformer {
+	return &machineAutoScalingGroupInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// RequirementGaps returns a RequirementGapInformer.
+func (v *version) RequirementGaps() RequirementGapInformer {
+	return &requirementGapInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Snapshots returns a SnapshotInformer.
+func (v *version) Snapshots() SnapshotInformer {
+	return &snapshotInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // StorageServices returns a StorageServiceInformer.
