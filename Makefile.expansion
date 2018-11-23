@@ -1,1 +1,2 @@
 GO_ONBUILD_IMAGE := cargo.caicloudprivatetest.com/library/golang:1.10.3-caimake
+GO_BUILD_PLATFORMS := linux/amd64
