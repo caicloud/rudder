@@ -102,6 +102,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 			Version:   release.Status.Version,
 			Template:  release.Spec.Template,
 			Config:    release.Spec.Config,
+			Suspend:   release.Spec.Suspend,
 		})
 		if err != nil {
 			// Record error status
