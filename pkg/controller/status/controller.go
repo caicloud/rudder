@@ -320,7 +320,9 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 				if err != nil {
 					// Log the error and mark as Failure
 					glog.Errorf("Can't decode resource for %s: %v", node, err)
-					status = releaseapi.ResourceStatusFrom(releaseapi.ResourceFailed)
+					status.Phase = releaseapi.ResourceFailed
+					status.Reason = "ErrorJudgeResource"
+					status.Message = err.Error()
 				}
 				statistics = status.PodStatistics
 			}
@@ -345,6 +347,9 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 			} else {
 				counter[status.Phase] = 1
 			}
+
+			detail.Reason = status.Reason
+			detail.Message = status.Message
 			detail.Resources[key] = counter
 		}
 		details[node] = detail
