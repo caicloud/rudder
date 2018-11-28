@@ -108,8 +108,6 @@ func (d *longRunning) Pods(updatedRevisionKey string) (updated, old []HyperPod, 
 	return updated, old, nil
 }
 
-// [Note] DaemonSet has no desired replicas in spec, so desiredReplicas should always be 0
-// we only use the desiredReplicas to judge whether the long running workload is Suspended
 func (d *longRunning) judge(desiredReplicas int32, updatePods, oldPods []HyperPod) releaseapi.ResourceStatus {
 	// get updated and old replicas
 	updateReplicas := len(updatePods)
@@ -124,6 +122,7 @@ func (d *longRunning) judge(desiredReplicas int32, updatePods, oldPods []HyperPo
 				Reason: "DesiredZeroReplicas",
 			}
 		}
+		// scaling up
 		return releaseapi.ResourceStatus{
 			Phase:  releaseapi.ResourceProgressing,
 			Reason: "ZeroReplicas",
@@ -165,8 +164,11 @@ func (d *longRunning) judge(desiredReplicas int32, updatePods, oldPods []HyperPo
 		return releaseapi.ResourceStatusFrom(releaseapi.ResourceUpdating)
 	}
 
-	// no old pods and all updated pods is Running
-	if running {
+	// The running status prerequisite:
+	// 1. no old pods
+	// 2. all updated pods are Running
+	// 3. the number of running pods == desired replicas
+	if running && realReplicas == int(desiredReplicas) {
 		return releaseapi.ResourceStatusFrom(releaseapi.ResourceRunning)
 	}
 
