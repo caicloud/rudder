@@ -18,6 +18,22 @@ type ConfigListerExpansion interface{}
 // MachineLister.
 type MachineListerExpansion interface{}
 
+// MachineAutoScalingGroupListerExpansion allows custom methods to be added to
+// MachineAutoScalingGroupLister.
+type MachineAutoScalingGroupListerExpansion interface{}
+
+// RequirementGapListerExpansion allows custom methods to be added to
+// RequirementGapLister.
+type RequirementGapListerExpansion interface{}
+
+// SnapshotListerExpansion allows custom methods to be added to
+// SnapshotLister.
+type SnapshotListerExpansion interface{}
+
+// SnapshotNamespaceListerExpansion allows custom methods to be added to
+// SnapshotNamespaceLister.
+type SnapshotNamespaceListerExpansion interface{}
+
 // StorageServiceListerExpansion allows custom methods to be added to
 // StorageServiceLister.
 type StorageServiceListerExpansion interface{}

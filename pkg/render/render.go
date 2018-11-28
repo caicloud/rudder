@@ -2,10 +2,14 @@ package render
 
 import (
 	"bytes"
+	"fmt"
 	"path"
 	"strings"
 
+	"github.com/buger/jsonparser"
 	"github.com/ghodss/yaml"
+	"github.com/golang/glog"
+
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/engine"
 	"k8s.io/helm/pkg/hooks"
@@ -26,6 +30,8 @@ type RenderOptions struct {
 	Template []byte
 	// Config is a json config to render template.
 	Config string
+	// Suspend is a flag of release.
+	Suspend *bool
 }
 
 // Render renders template and config to resources.
@@ -58,10 +64,18 @@ func (r *render) Render(options *RenderOptions) (Carrier, error) {
 		Revision:  int(options.Version),
 		IsInstall: true,
 	}
-	values, err := chartutil.ToRenderValues(chart, &chartapi.Config{Raw: options.Config}, releaseOpts)
+
+	config, err := r.renderConfig(options)
+	if err != nil {
+		glog.Errorf("render release: %s 's config error: %v", options.Release, err)
+		return nil, err
+	}
+
+	values, err := chartutil.ToRenderValues(chart, &chartapi.Config{Raw: config}, releaseOpts)
 	if err != nil {
 		return nil, err
 	}
+
 	resources, err := r.renderResources(chart, values)
 	if err != nil {
 		return nil, err
@@ -123,4 +137,45 @@ func (r *render) isHook(resource string) (bool, error) {
 	}
 	_, ok := head.Metadata.Annotations[hooks.HookAnno]
 	return ok, nil
+}
+
+func (r *render) renderConfig(options *RenderOptions) (string, error) {
+	if options.Suspend == nil || (options.Suspend != nil && !*options.Suspend) {
+		return options.Config, nil
+	}
+
+	confBytes := []byte(options.Config)
+	count := 0
+	cb := func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+		defer func() { count++ }()
+		var typ string
+		typ, err = jsonparser.GetString(value, "type")
+		if err != nil {
+			return
+		}
+		switch typ {
+		case "Deployment", "StatefulSet":
+			confBytes, err = jsonparser.Set(confBytes, []byte("0"), "_config", "controllers", fmt.Sprintf("[%d]", count), "controller", "replica")
+			if err != nil {
+				glog.Error(err)
+			}
+		case "CronJob":
+			confBytes, err = jsonparser.Set(confBytes, []byte("true"), "_config", "controllers", fmt.Sprintf("[%d]", count), "controller", "suspend")
+			if err != nil {
+				glog.Error(err)
+			}
+		case "Job", "DaemonSet":
+			glog.Warning("controller type is: %s, release suspend flag can not work on it", typ)
+		default:
+			err = fmt.Errorf("illegal controller type: %s", typ)
+		}
+		return
+	}
+	_, err := jsonparser.ArrayEach(confBytes, cb, "_config", "controllers")
+	if err != nil {
+		glog.Errorf("render release: %s suspend flag error: %v", options.Release, err)
+		glog.Errorf("release: %s 's config: %s", options.Release, options.Config)
+		return "", err
+	}
+	return string(confBytes), nil
 }

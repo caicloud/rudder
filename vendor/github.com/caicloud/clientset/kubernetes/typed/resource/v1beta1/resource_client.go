@@ -18,6 +18,9 @@ type ResourceV1beta1Interface interface {
 	ClustersGetter
 	ConfigsGetter
 	MachinesGetter
+	MachineAutoScalingGroupsGetter
+	RequirementGapsGetter
+	SnapshotsGetter
 	StorageServicesGetter
 	StorageTypesGetter
 	TagsGetter
@@ -38,6 +41,18 @@ func (c *ResourceV1beta1Client) Configs() ConfigInterface {
 
 func (c *ResourceV1beta1Client) Machines() MachineInterface {
 	return newMachines(c)
+}
+
+func (c *ResourceV1beta1Client) MachineAutoScalingGroups() MachineAutoScalingGroupInterface {
+	return newMachineAutoScalingGroups(c)
+}
+
+func (c *ResourceV1beta1Client) RequirementGaps() RequirementGapInterface {
+	return newRequirementGaps(c)
+}
+
+func (c *ResourceV1beta1Client) Snapshots(namespace string) SnapshotInterface {
+	return newSnapshots(c, namespace)
 }
 
 func (c *ResourceV1beta1Client) StorageServices() StorageServiceInterface {
