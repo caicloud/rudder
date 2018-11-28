@@ -43,7 +43,7 @@
 
 [[projects]]
   branch = "release-1.10"
-  digest = "1:c23255fb0d5e7fe89eb2ec944ab8548d6373c3da0a9e797a54c500af39e5fb76"
+  digest = "1:c88bd77da6cdb7c5bcc7a1c7ef3d4b65a26e544f0ac7157e014d6a1a59154e4c"
   name = "github.com/caicloud/clientset"
   packages = [
     "informers",
@@ -67,6 +67,8 @@
     "informers/logging/v1alpha1",
     "informers/model",
     "informers/model/v1alpha1",
+    "informers/orchestration",
+    "informers/orchestration/v1alpha1",
     "informers/release",
     "informers/release/v1alpha1",
     "informers/resource",
@@ -86,6 +88,7 @@
     "kubernetes/typed/loadbalance/v1alpha2",
     "kubernetes/typed/logging/v1alpha1",
     "kubernetes/typed/model/v1alpha1",
+    "kubernetes/typed/orchestration/v1alpha1",
     "kubernetes/typed/release/v1alpha1",
     "kubernetes/typed/resource/v1alpha1",
     "kubernetes/typed/resource/v1beta1",
@@ -140,6 +143,7 @@
     "listers/loadbalance/v1alpha2",
     "listers/logging/v1alpha1",
     "listers/model/v1alpha1",
+    "listers/orchestration/v1alpha1",
     "listers/release/v1alpha1",
     "listers/resource/v1alpha1",
     "listers/resource/v1beta1",
@@ -154,6 +158,7 @@
     "pkg/apis/loadbalance/v1alpha2",
     "pkg/apis/logging/v1alpha1",
     "pkg/apis/model/v1alpha1",
+    "pkg/apis/orchestration/v1alpha1",
     "pkg/apis/release/v1alpha1",
     "pkg/apis/resource/v1alpha1",
     "pkg/apis/resource/v1beta1",
@@ -163,7 +168,7 @@
     "util/syncqueue",
   ]
   pruneopts = "UT"
-  revision = "e57b03c7a98b52e23ff2af649cb55f054c2a1ca0"
+  revision = "3b8533d9e8aa2e43893891e853af2ce8f1707e0e"
 
 [[projects]]
   branch = "master"
