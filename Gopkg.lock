@@ -172,7 +172,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fc9d2d8e94eb3d68cdc8981ec3901734937d12c3f348b1f88397b6166869f00a"
+  digest = "1:ed174090326191d4f1de2a27759dc2dc818104790c59440120e133955c0e78ab"
   name = "github.com/caicloud/rudder-client"
   packages = [
     "status",
@@ -183,7 +183,7 @@
     "status/universal",
   ]
   pruneopts = "UT"
-  revision = "bff540782b154cc03f925e4e0f45fb8cb5dadd21"
+  revision = "1b6e3887c8e63f502fb294fad47b2b840a2e7a09"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
