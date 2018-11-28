@@ -6,12 +6,14 @@ import (
 )
 
 type ReplicaType string
-type StageStatus string
+type StagePhase string
 type StageID string
 type DatasetType string
 type ToolType string
 type FrameworkType string
 type ProtocolType string
+type ProjectPhase string
+type TemplateType string
 
 const (
 	ProtocolgRPC    ProtocolType = "gRPC"
@@ -51,19 +53,31 @@ const (
 )
 
 const (
-	StageReady    StageStatus = "Ready"
-	StageCreating StageStatus = "Creating"
-	StageError    StageStatus = "Error"
+	StageReady       StagePhase = "Ready"
+	StageCreating    StagePhase = "Creating"
+	StageError       StagePhase = "Error"
+	StageTerminating StagePhase = "Terminating"
 )
 
 const (
 	Model DatasetType = "model"
-	Data  DatasetType = "data"
+	Data  DatasetType = "dataset"
 )
 
 const (
 	JupyterLab      ToolType = "jupyterLab"
 	JupyterNotebook ToolType = "jupyterNotebook"
+)
+
+const (
+	ProjectReady       ProjectPhase = "Ready"
+	ProjectFailed      ProjectPhase = "Failed"
+	ProjectTerminating ProjectPhase = "Terminating"
+)
+
+const (
+	TrainingTemplate TemplateType = "training"
+	GeneralTemplate  TemplateType = "general"
 )
 
 // +genclient
@@ -75,24 +89,25 @@ type Project struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProjectSpec   `json:"spec,omitempty"`
-	Status ProjectStatus `json:"status,omitempty"`
+	Spec   ProjectSpec   `json:"spec"`
+	Status ProjectStatus `json:"status"`
 }
 
 // ProjectSpec defines the specification for a project.
 type ProjectSpec struct {
 	// Stages defines all offline stages in a project.
-	Stages []Stage `json:"stages,omitempty"`
+	Stages []Stage `json:"stages"`
 	// Steps defines all offline steps in a project.
-	Steps []Step `json:"steps,omitempty"`
+	Steps []Step `json:"steps"`
 	// Tools contains all the tools used in a project, e.g. jupyter, tensorboard, etc
-	Tools []Tool `json:"tools,omitempty"`
+	Tools []Tool `json:"tools"`
 	// Storage contains all storage used in a project.
-	Storage []corev1.VolumeSource `json:"storage,omitempty"`
+	Storage []corev1.VolumeSource `json:"storage"`
 }
 
 type ProjectStatus struct {
-	StageStatus map[StageID]StageStatus `json:"stageStatus,omitempty"`
+	Phase      ProjectPhase           `json:"phase"`
+	StagePhase map[StageID]StagePhase `json:"stagePhase"`
 }
 
 type Step struct {
@@ -105,13 +120,13 @@ type Tool struct {
 	// Tool's uid
 	UID string `json:"uid"`
 	// Tool's name
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Tool's type, include jupyter, jupyter lab
-	Type ToolType `json:"type,omitempty"`
+	Type ToolType `json:"type"`
 	// Tool's image
-	Image ImageFlavor `json:"image,omitempty"`
+	Image ImageFlavor `json:"image"`
 	// Tool's resource
-	Resource ResourceFlavor `json:"resource,omitempty"`
+	Resource ResourceFlavor `json:"resource"`
 	// Tool's Env
 	Env []corev1.EnvVar `json:"env"`
 }
@@ -122,27 +137,27 @@ type Stage struct {
 	// StageMeta contains metadata of an offline stage.
 	StageMeta `json:",inline"`
 	// StepUID references the step that this stage belongs to.
-	StepUID string `json:"stepUID,omitempty"`
+	StepUID string `json:"stepUID"`
 	// Template with configuration filled in.
-	Template TemplateSpec `json:"template,omitempty"`
+	Template TemplateSpec `json:"template"`
 	// Tool references to the tools available in this template.
-	ToolID []string `json:"toolID,omitempty"`
+	ToolID []string `json:"toolID"`
 }
 
 type StageMeta struct {
-	Username     string      `json:"userName,omitempty"`
-	UID          string      `json:"uid,omitempty"`
-	Name         string      `json:"name,omitempty"`
-	Description  string      `json:"description,omitempty"`
-	CreationTime metav1.Time `json:"creationTime,omitempty"`
+	Username     string      `json:"userName"`
+	UID          string      `json:"uid"`
+	Name         string      `json:"name"`
+	Description  string      `json:"description"`
+	CreationTime metav1.Time `json:"creationTime"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Project `json:"items,omitempty"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Project `json:"items"`
 }
 
 // +genclient
@@ -155,7 +170,7 @@ type Template struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec TemplateSpec `json:"spec,omitempty"`
+	Spec TemplateSpec `json:"spec"`
 }
 
 // TemplateSpec contains all necessary information to define a template.
@@ -163,9 +178,9 @@ type TemplateSpec struct {
 	// TemplateSource the source of the template, which is categorized into different types.
 	TemplateSource `json:",inline"`
 	// Flavor references to the flavors available this template.
-	Flavors []string `json:"flavors,omitempty"`
+	Flavors []string `json:"flavors"`
 	// Properties is a Template property contains logo, type and framework.
-	Properties Properties `json:"properties,omitempty"`
+	Properties Properties `json:"properties"`
 }
 
 type TemplateSource struct {
@@ -179,39 +194,39 @@ type TemplateSource struct {
 
 type Properties struct {
 	// Logo defines the logo of the template.
-	Logo string `json:"logo,omitempty"`
+	Logo string `json:"logo"`
 	// Type defines the type of the template. e.g. training, serving, etc.
-	Type string `json:"type,omitempty"`
+	Type TemplateType `json:"type"`
 	// Framework defines the framework of the template. e.g. tensorflow, pytorch, etc.
-	Framework FrameworkType `json:"framework,omitempty"`
+	Framework FrameworkType `json:"framework"`
 }
 
 type Training struct {
 	// Inputs dataset for a training stage.
-	Inputs []Dataset `json:"inputs,omitempty"`
+	Inputs []Dataset `json:"inputs"`
 	// Outputs dataset for a training stage.
-	Outputs []Dataset `json:"outputs,omitempty"`
+	Outputs []Dataset `json:"outputs"`
 	// Image used in the training stage.
-	Image ImageFlavor `json:"image,omitempty"`
+	Image ImageFlavor `json:"image"`
 	// Replicas used in training stage.
 	Replicas []Replica `json:"replicas"`
 	// Pod's command
-	Command string `json:"command,omitempty"`
+	Command string `json:"command"`
 	// Pod's workdir
-	WorkDir string `json:"workdir,omitempty"`
+	WorkDir string `json:"workdir"`
 	// Pod's codedir
-	CodeDir string `json:"codedir,omitempty"`
+	CodeDir string `json:"codedir"`
 	// Pod's env
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	Env []corev1.EnvVar `json:"env"`
 	// Dependence files
 	Dependency Dependency `json:"dependency,omitempty"`
 }
 
 type Serving struct {
 	// Inputs dataset for a serving stage.
-	Inputs []Dataset `json:"inputs,omitempty"`
+	Inputs []Dataset `json:"inputs"`
 	// Image used in serving stage
-	Image ImageFlavor `json:"image,omitempty"`
+	Image ImageFlavor `json:"image"`
 	// Replica used in serving stage.
 	Replica Replica `json:"replica"`
 	// Protocol is protocol used in serving model. e.g. gRPC, RESTful.
@@ -220,30 +235,30 @@ type Serving struct {
 
 type General struct {
 	// Inputs dataset for a general stage.
-	Inputs []Dataset `json:"inputs,omitempty"`
+	Inputs []Dataset `json:"inputs"`
 	// Outputs dataset for a general stage.
-	Outputs []Dataset `json:"outputs,omitempty"`
+	Outputs []Dataset `json:"outputs"`
 	// Image used in general stage.
-	Image ImageFlavor `json:"image,omitempty"`
+	Image ImageFlavor `json:"image"`
 	// Replica used in general stage.
 	Replica Replica `json:"replica"`
 	// Pod's command
-	Command string `json:"command,omitempty"`
+	Command string `json:"command"`
 	// Pod's workdir
-	WorkDir string `json:"workdir,omitempty"`
+	WorkDir string `json:"workdir"`
 	// Pod's codedir
-	CodeDir string `json:"codedir,omitempty"`
+	CodeDir string `json:"codedir"`
 	// Pod's env
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	Env []corev1.EnvVar `json:"env"`
 	// Dependence files
-	Dependency Dependency `json:"dependency,omitempty"`
+	Dependency Dependency `json:"dependency"`
 }
 
 // DataSet is struct of Projects Input and Output
 type Dataset struct {
-	Name    string      `json:"name,omitempty"`
-	Type    DatasetType `json:"type,omitempty"`
-	Version string      `json:"version,omitempty"`
+	Name    string      `json:"name"`
+	Type    DatasetType `json:"type"`
+	Version string      `json:"version"`
 }
 
 type Dependency struct {
@@ -256,7 +271,7 @@ type Dependency struct {
 type TemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Template `json:"items,omitempty"`
+	Items           []Template `json:"items"`
 }
 
 // +genclient
@@ -269,33 +284,33 @@ type Flavor struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec FlavorSpec `json:"spec,omitempty"`
+	Spec FlavorSpec `json:"spec"`
 }
 
 type FlavorSpec struct {
 	// Template images, can be selected
-	Images []ImageFlavor `json:"images,omitempty"`
+	Images []ImageFlavor `json:"images"`
 
 	// Template resource, can be selected
-	Resources []ResourceFlavor `json:"resources,omitempty"`
+	Resources []ResourceFlavor `json:"resources"`
 }
 
 type ImageFlavor struct {
-	Name  string `json:"name,omitempty"`
-	Image string `json:"image,omitempty"`
+	Name  string `json:"name"`
+	Image string `json:"image"`
 }
 
 type Replica struct {
-	Type     ReplicaType    `json:"type,omitempty"`
-	Count    int32          `json:"count,omitempty"`
-	Resource ResourceFlavor `json:"resource,omitempty"`
+	Type     ReplicaType    `json:"type"`
+	Count    int32          `json:"count"`
+	Resource ResourceFlavor `json:"resource"`
 }
 
 type ResourceFlavor struct {
-	Name   string `json:"name,omitempty"`
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	GPU    string `json:"gpu,omitempty"`
+	Name   string `json:"name"`
+	CPU    string `json:"cpu"`
+	Memory string `json:"memory"`
+	GPU    string `json:"gpu"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -303,5 +318,5 @@ type ResourceFlavor struct {
 type FlavorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Flavor `json:"items,omitempty"`
+	Items           []Flavor `json:"items"`
 }
