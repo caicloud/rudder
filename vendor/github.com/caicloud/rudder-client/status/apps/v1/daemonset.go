@@ -85,7 +85,7 @@ func (d *daemonsetLongRunning) Predict(updatedRevision interface{}, events []*co
 
 func (d *daemonsetLongRunning) DesiredReplics() int32 {
 	// daemonset has no desired replicas, its value should always be 0
-	return 0
+	return d.daemonset.Status.DesiredNumberScheduled
 }
 
 func getHistoriesForDaemonSet(historyLister appslisters.ControllerRevisionLister, daemonset *appsv1.DaemonSet) ([]*appsv1.ControllerRevision, error) {
