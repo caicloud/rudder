@@ -73,6 +73,30 @@ type StorageService struct {
 	// create volumes of this storage class.
 	// +optional
 	Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters"`
+
+	// StorageMetaData represents the current metadata for each storage backend.
+	// +optional
+	StorageMetaData StorageMetaData `json:"storageMetaData,omitempty"`
+}
+
+// StorageMetaData is the data structure for each storage backend metadata.
+type StorageMetaData struct {
+	Ceph *CephMetaData `json:"ceph,omitempty"`
+}
+
+// CephMetaData is the data structure for Ceph metadata.
+type CephMetaData struct {
+	Pools []CephPool `json:"pools"`
+}
+
+// CephPool is the data structure for single Ceph storage pool.
+type CephPool struct {
+	Name        string `json:"name"`
+	ReplicaSize int    `json:"replicaSize"`
+	// total capacity of the current pool, kb
+	Capacity int `json:"capacity"`
+	// capacity used, kb
+	Used int `json:"used"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

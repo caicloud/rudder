@@ -78,6 +78,7 @@ FOR:
 		case rel := <-getter.Get():
 			if !(target != nil && rel.Spec.RollbackTo == nil &&
 				target.Spec.Config == rel.Spec.Config &&
+				target.Spec.Suspend == rel.Spec.Suspend &&
 				reflect.DeepEqual(target.Spec.Template, rel.Spec.Template)) {
 				// Config was changed. Add it to queue.
 				target = rel

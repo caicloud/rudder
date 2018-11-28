@@ -12,6 +12,12 @@ type ConfigExpansion interface{}
 
 type MachineExpansion interface{}
 
+type MachineAutoScalingGroupExpansion interface{}
+
+type RequirementGapExpansion interface{}
+
+type SnapshotExpansion interface{}
+
 type StorageServiceExpansion interface{}
 
 type StorageTypeExpansion interface{}

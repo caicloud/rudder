@@ -42,6 +42,10 @@
   branch = "pkg"
   source = "github.com/caicloud/helm"
 
+[[constraint]]
+  name = "github.com/buger/jsonparser"
+  branch = "master"
+
 [prune]
   go-tests = true
   unused-packages = true

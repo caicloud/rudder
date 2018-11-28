@@ -9,10 +9,14 @@ package informers
 import (
 	v1beta1 "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1"
 	v1 "github.com/caicloud/clientset/pkg/apis/apiregistration/v1"
-	v1alpha1 "github.com/caicloud/clientset/pkg/apis/cnetworking/v1alpha1"
+	v1alpha1 "github.com/caicloud/clientset/pkg/apis/clever/v1alpha1"
+	cnetworkingv1alpha1 "github.com/caicloud/clientset/pkg/apis/cnetworking/v1alpha1"
 	configv1alpha1 "github.com/caicloud/clientset/pkg/apis/config/v1alpha1"
+	datasetv1alpha1 "github.com/caicloud/clientset/pkg/apis/dataset/v1alpha1"
 	devopsv1 "github.com/caicloud/clientset/pkg/apis/devops/v1"
 	v1alpha2 "github.com/caicloud/clientset/pkg/apis/loadbalance/v1alpha2"
+	loggingv1alpha1 "github.com/caicloud/clientset/pkg/apis/logging/v1alpha1"
+	modelv1alpha1 "github.com/caicloud/clientset/pkg/apis/model/v1alpha1"
 	releasev1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	resourcev1alpha1 "github.com/caicloud/clientset/pkg/apis/resource/v1alpha1"
 	resourcev1beta1 "github.com/caicloud/clientset/pkg/apis/resource/v1beta1"
@@ -49,8 +53,16 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1.SchemeGroupVersion.WithResource("apiservices"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apiregistration().V1().APIServices().Informer()}, nil
 
+		// Group=clever.caicloud.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("flavors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Clever().V1alpha1().Flavors().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("projects"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Clever().V1alpha1().Projects().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("templates"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Clever().V1alpha1().Templates().Informer()}, nil
+
 		// Group=cnetworking.caicloud.io, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("networkpolicies"):
+	case cnetworkingv1alpha1.SchemeGroupVersion.WithResource("networkpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Cnetworking().V1alpha1().NetworkPolicies().Informer()}, nil
 
 		// Group=config.caicloud.io, Version=v1alpha1
@@ -59,6 +71,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case configv1alpha1.SchemeGroupVersion.WithResource("configreferences"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().ConfigReferences().Informer()}, nil
 
+		// Group=dataset.caicloud.io, Version=v1alpha1
+	case datasetv1alpha1.SchemeGroupVersion.WithResource("datasets"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Dataset().V1alpha1().Datasets().Informer()}, nil
+
 		// Group=devops.caicloud.io, Version=v1
 	case devopsv1.SchemeGroupVersion.WithResource("cargos"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Devops().V1().Cargos().Informer()}, nil
@@ -66,6 +82,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=loadbalance.caicloud.io, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("loadbalancers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Loadbalance().V1alpha2().LoadBalancers().Informer()}, nil
+
+		// Group=logging.caicloud.io, Version=v1alpha1
+	case loggingv1alpha1.SchemeGroupVersion.WithResource("logendpoints"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Logging().V1alpha1().LogEndpoints().Informer()}, nil
+
+		// Group=model.caicloud.io, Version=v1alpha1
+	case modelv1alpha1.SchemeGroupVersion.WithResource("models"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Model().V1alpha1().Models().Informer()}, nil
 
 		// Group=release.caicloud.io, Version=v1alpha1
 	case releasev1alpha1.SchemeGroupVersion.WithResource("canaryreleases"):
@@ -88,6 +112,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().Configs().Informer()}, nil
 	case resourcev1beta1.SchemeGroupVersion.WithResource("machines"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().Machines().Informer()}, nil
+	case resourcev1beta1.SchemeGroupVersion.WithResource("machineautoscalinggroups"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().MachineAutoScalingGroups().Informer()}, nil
+	case resourcev1beta1.SchemeGroupVersion.WithResource("requirementgaps"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().RequirementGaps().Informer()}, nil
+	case resourcev1beta1.SchemeGroupVersion.WithResource("snapshots"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().Snapshots().Informer()}, nil
 	case resourcev1beta1.SchemeGroupVersion.WithResource("storageservices"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().StorageServices().Informer()}, nil
 	case resourcev1beta1.SchemeGroupVersion.WithResource("storagetypes"):
