@@ -4,6 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // +genclient
@@ -296,13 +297,15 @@ type ClusterNetwork struct {
 }
 
 type ClusterAuth struct {
-	KubeUser     string `json:"kubeUser"`
-	KubePassword string `json:"kubePassword"`
-	KubeToken    string `json:"kubeToken"`
-	KubeCertPath string `json:"kubeCertPath"`
-	KubeCAData   []byte `json:"kubeCAData"`
-	EndpointIP   string `json:"endpointIP"`
-	EndpointPort string `json:"endpointPort"`
+	KubeUser     string `json:"kubeUser,omitempty"`
+	KubePassword string `json:"kubePassword,omitempty"`
+	KubeToken    string `json:"kubeToken,omitempty"`
+	KubeCertPath string `json:"kubeCertPath,omitempty"`
+	KubeCAData   []byte `json:"kubeCAData,omitempty"`
+	EndpointIP   string `json:"endpointIP,omitempty"`
+	EndpointPort string `json:"endpointPort,omitempty"`
+
+	KubeConfig *clientcmdapi.Config `json:"kubeConfig,omitempty"`
 }
 
 type ClusterVersions struct {
@@ -445,6 +448,8 @@ type MachineGPUInfo struct {
 type ClusterScaleUpSetting struct {
 	Algorithm            string `json:"algorithm"`
 	IsQuotaUpdateEnabled bool   `json:"isQuotaUpdateEnabled"`
+	// cool down time after any cluster scale up action, waiting for pods schedule
+	CoolDown metav1.Duration `json:"coolDown"`
 }
 
 // ClusterScaleDownSetting describe cluster scale down setting
