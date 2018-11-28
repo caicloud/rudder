@@ -348,8 +348,11 @@ func (sc *StatusController) detect(release *releaseapi.Release) (map[string]rele
 				counter[status.Phase] = 1
 			}
 
-			detail.Reason = status.Reason
-			detail.Message = status.Message
+			if status.Phase == releaseapi.ResourceFailed {
+				detail.Reason = status.Reason
+				detail.Message = status.Message
+			}
+
 			detail.Resources[key] = counter
 		}
 		details[node] = detail
