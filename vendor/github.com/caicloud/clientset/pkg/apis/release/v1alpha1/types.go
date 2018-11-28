@@ -64,6 +64,10 @@ type ReleaseDetailStatus struct {
 	// Resources contains a kind-counter map.
 	// A kind should be a unique name of a group resources.
 	Resources map[string]ResourceCounter `json:"resources,omitempty"`
+	// Reason for record the failed reason.
+	Reason string `json:"reason,omitempty"`
+	// Human readable message indicating details about the failure.
+	Message string `json:"message,omitempty"`
 }
 
 // ResourceCounter is a status counter

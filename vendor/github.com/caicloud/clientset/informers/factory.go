@@ -19,6 +19,7 @@ import (
 	loadbalance "github.com/caicloud/clientset/informers/loadbalance"
 	logging "github.com/caicloud/clientset/informers/logging"
 	model "github.com/caicloud/clientset/informers/model"
+	orchestration "github.com/caicloud/clientset/informers/orchestration"
 	release "github.com/caicloud/clientset/informers/release"
 	resource "github.com/caicloud/clientset/informers/resource"
 	tenant "github.com/caicloud/clientset/informers/tenant"
@@ -96,6 +97,7 @@ type SharedInformerFactory interface {
 	Loadbalance() loadbalance.Interface
 	Logging() logging.Interface
 	Model() model.Interface
+	Orchestration() orchestration.Interface
 	Release() release.Interface
 	Resource() resource.Interface
 	Tenant() tenant.Interface
@@ -139,6 +141,10 @@ func (f *sharedInformerFactory) Logging() logging.Interface {
 
 func (f *sharedInformerFactory) Model() model.Interface {
 	return model.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Orchestration() orchestration.Interface {
+	return orchestration.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Release() release.Interface {
