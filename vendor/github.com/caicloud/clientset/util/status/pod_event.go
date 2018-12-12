@@ -10,8 +10,17 @@ import (
 
 var (
 	errorEventCases = []event.EventCase{
-		// Liveness and Readiness probe failed
-		{v1.EventTypeWarning, event.ContainerUnhealthy, []string{"probe failed"}},
+		{
+			// Liveness and Readiness probe failed
+			EventType: v1.EventTypeWarning,
+			Reason:    event.ContainerUnhealthy,
+			MsgKeys:   []string{"probe failed"},
+		},
+		{
+			// failed to mount volume
+			EventType: v1.EventTypeWarning,
+			Reason:    event.FailedMountVolume,
+		},
 	}
 )
 

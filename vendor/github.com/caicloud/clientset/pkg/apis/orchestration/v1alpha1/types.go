@@ -10,11 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// ApplicationPlural is the plural of application resources
-	ApplicationPlural = "applications"
-)
-
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -38,11 +33,6 @@ type ApplicationSpec struct {
 	// Description is the description of current application
 	// +optional
 	Description string `json:"description,omitempty"`
-
-	// Scratch describes that the modification of application
-	// can not take effect immediately
-	// +optional
-	Scratch *bool `json:"scratch,omitempty"`
 
 	// Template is an archived template data
 	Template []byte `json:"template"`
@@ -91,9 +81,16 @@ type VertexMeta struct {
 	// Annotations is an unstructured key value map stored with a resource that may be
 	// set by external tools to store and retrieve arbitrary metadata. They are not
 	// queryable and should be preserved when modifying objects.
-	// The annotations will be present in workload's Annotations
+	// The Annotations will be present in workload's Annotations
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Map of string keys and values that can be used to organize and categorize
+	// (scope and select) objects. May match selectors of replication controllers
+	// and services.
+	// The Labels will be present in workload's Labels
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
 
 	// Memos contain extra infromation of this workload, such as coordinates.
 	// The difference beween Memos and Annotations is that the informations in Memos
@@ -127,14 +124,12 @@ type Edge struct {
 
 // ApplicationStatus is the most recently observed status of the Application
 type ApplicationStatus struct {
-	// runtime graph
-	Graph WorkloadGraph `json:"graph,omitempty"`
-	// workloads status
-	Workloads []WorkloadStatus `json:"workloadStatuses,omitempty"`
 	// Conditions is an array of current observed application conditions.
 	Conditions []AppicationCondition `json:"conditions,omitempty"`
 	// LastUpdateTime is the last update time of current application
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	// workloads status
+	Workloads []WorkloadStatus `json:"workloadStatuses,omitempty"`
 }
 
 // WorkloadStatus describes the current
@@ -213,3 +208,31 @@ const (
 	// - PVC: Lost
 	ResourceFailed ResourcePhase = "Failed"
 )
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ApplicationDraft describes a temporary application draft
+type ApplicationDraft struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Data contains the application draft data
+	Data ApplicationDraftData `json:"data,omitempty"`
+}
+
+// ApplicationDraftData contains the application draft data
+type ApplicationDraftData struct {
+	// Graph contains all workloads and their startup sequence
+	Graph WorkloadGraph `json:"graph"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ApplicationDraftList describes an array of application instances
+type ApplicationDraftList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ApplicationDraft `json:"items"`
+}

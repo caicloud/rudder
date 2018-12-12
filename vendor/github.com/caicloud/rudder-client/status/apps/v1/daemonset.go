@@ -17,8 +17,8 @@ import (
 
 var (
 	dsetErrorEventCases = []event.EventCase{
-		// Liveness and Readiness probe failed
-		{corev1.EventTypeWarning, event.FailedCreatePodReason, []string{"exceeded quota"}},
+		// match all FailedCreate
+		{EventType: corev1.EventTypeWarning, Reason: event.FailedCreatePodReason},
 	}
 )
 

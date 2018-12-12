@@ -95,6 +95,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=orchestration.caicloud.io, Version=v1alpha1
 	case orchestrationv1alpha1.SchemeGroupVersion.WithResource("applications"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Orchestration().V1alpha1().Applications().Informer()}, nil
+	case orchestrationv1alpha1.SchemeGroupVersion.WithResource("applicationdrafts"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Orchestration().V1alpha1().ApplicationDrafts().Informer()}, nil
 
 		// Group=release.caicloud.io, Version=v1alpha1
 	case releasev1alpha1.SchemeGroupVersion.WithResource("canaryreleases"):
