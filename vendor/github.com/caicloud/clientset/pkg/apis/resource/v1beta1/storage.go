@@ -97,6 +97,8 @@ type CephPool struct {
 	Capacity int `json:"capacity"`
 	// capacity used, kb
 	Used int `json:"used"`
+	// number of objects in the pool
+	Objects int `json:"objects"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

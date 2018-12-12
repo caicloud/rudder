@@ -16,6 +16,7 @@ import (
 type OrchestrationV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ApplicationsGetter
+	ApplicationDraftsGetter
 }
 
 // OrchestrationV1alpha1Client is used to interact with features provided by the orchestration.caicloud.io group.
@@ -25,6 +26,10 @@ type OrchestrationV1alpha1Client struct {
 
 func (c *OrchestrationV1alpha1Client) Applications(namespace string) ApplicationInterface {
 	return newApplications(c, namespace)
+}
+
+func (c *OrchestrationV1alpha1Client) ApplicationDrafts(namespace string) ApplicationDraftInterface {
+	return newApplicationDrafts(c, namespace)
 }
 
 // NewForConfig creates a new OrchestrationV1alpha1Client for the given config.

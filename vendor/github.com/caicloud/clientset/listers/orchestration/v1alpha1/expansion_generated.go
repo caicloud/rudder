@@ -13,3 +13,11 @@ type ApplicationListerExpansion interface{}
 // ApplicationNamespaceListerExpansion allows custom methods to be added to
 // ApplicationNamespaceLister.
 type ApplicationNamespaceListerExpansion interface{}
+
+// ApplicationDraftListerExpansion allows custom methods to be added to
+// ApplicationDraftLister.
+type ApplicationDraftListerExpansion interface{}
+
+// ApplicationDraftNamespaceListerExpansion allows custom methods to be added to
+// ApplicationDraftNamespaceLister.
+type ApplicationDraftNamespaceListerExpansion interface{}

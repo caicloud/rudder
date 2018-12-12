@@ -6,12 +6,16 @@ import (
 	"k8s.io/api/core/v1"
 )
 
+// copy from k8s.io/kubernetes/pkg/kubelet/evnets/event.go
 const (
 	// ContainerUnhealthy describes Unhealthy pod event
-	// copy from k8s.io/kubernetes/pkg/kubelet/evnets/event.go
 	ContainerUnhealthy = "Unhealthy"
+	FailedMountVolume  = "FailedMount"
+)
 
-	// Reasons for pod events
+// Reasons for pod events
+const (
+
 	// FailedCreatePodReason is added in an event and in a replica set condition
 	// when a pod for a replica set is failed to be created.
 	FailedCreatePodReason = "FailedCreate"
@@ -53,12 +57,16 @@ func (c *EventCase) Match(event *v1.Event) bool {
 	if event == nil {
 		return false
 	}
-	if c.EventType != event.Type {
+	if c.EventType != "" && c.EventType != event.Type {
 		return false
 	}
 
-	if c.Reason != event.Reason {
+	if c.Reason != "" && c.Reason != event.Reason {
 		return false
+	}
+
+	if len(c.MsgKeys) == 0 {
+		return true
 	}
 
 	for _, kw := range c.MsgKeys {
