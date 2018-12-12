@@ -91,15 +91,16 @@ type Machine struct {
 }
 
 type MachineSpec struct {
-	Provider       CloudProvider              `json:"provider"`
-	ProviderConfig MachineCloudProviderConfig `json:"providerConfig,omitempty"`
-	Address        []NodeAddress              `json:"address"`
-	SshPort        string                     `json:"sshPort"`
-	Auth           MachineAuth                `json:"auth"`
-	Versions       MachineVersions            `json:"versions,omitempty"`
-	Cluster        string                     `json:"cluster"`
-	IsMaster       bool                       `json:"isMaster"`
-	Tags           map[string]string          `json:"tags"`
+	Provider         CloudProvider              `json:"provider"`
+	ProviderConfig   MachineCloudProviderConfig `json:"providerConfig,omitempty"`
+	Address          []NodeAddress              `json:"address"`
+	SshPort          string                     `json:"sshPort"`
+	Auth             MachineAuth                `json:"auth"`
+	Versions         MachineVersions            `json:"versions,omitempty"`
+	Cluster          string                     `json:"cluster"`
+	IsMaster         bool                       `json:"isMaster"`
+	HostnameReadonly bool                       `json:"hostnameReadonly,omitempty"`
+	Tags             map[string]string          `json:"tags"`
 }
 
 type MachineStatus struct {
@@ -112,6 +113,47 @@ type MachineStatus struct {
 	NodeStatus MachineNodeStatus                  `json:"nodeStatus"`
 	// other
 	OperationLogs []OperationLog `json:"operationLogs,omitempty"`
+
+	// Current service state of machine.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []MachineCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
+}
+
+// MachineConditionType is a valid value for MachineCondition.Type
+type MachineConditionType string
+
+// These are valid condition statuses. "ConditionTrue" means a resource is in the condition.
+// "ConditionFalse" means a resource is not in the condition. "ConditionUnknown" means kubernetes
+// can't decide if a resource is in the condition or not. In the future, we could add other
+// intermediate conditions, e.g. ConditionDegraded.
+const (
+	ConditionTrue    ConditionStatus = "True"
+	ConditionFalse   ConditionStatus = "False"
+	ConditionUnknown ConditionStatus = "Unknown"
+)
+
+// MachineCondition contains details for the current condition of this machine.
+type MachineCondition struct {
+	// Type is the type of the condition.
+	// Currently only Ready.
+	Type MachineConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=MachineConditionType"`
+	// Status is the status of the condition.
+	// Can be True, False, Unknown.
+	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=ConditionStatus"`
+	// Last time we probed the condition.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty" protobuf:"bytes,3,opt,name=lastProbeTime"`
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" protobuf:"bytes,4,opt,name=lastTransitionTime"`
+	// Unique, one-word, CamelCase reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty" protobuf:"bytes,5,opt,name=reason"`
+	// Human-readable message indicating details about last transition.
+	// +optional
+	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -585,6 +627,12 @@ type MASGMachineInfo struct {
 	// if nil or 0, means machine not bound to cluster yet
 	BoundTime *metav1.Time `json:"boundTime,omitempty"`
 
+	// timestamp when vm ready in cluster
+	// if nil or 0, means machine not ready to cluster yet
+	ReadyTime *metav1.Time `json:"readyTime,omitempty"`
+	// timestamp when vm failed
+	// if nil or 0, means machine not failed yet
+	FailedTime *metav1.Time `json:"failedTime,omitempty"`
 	// scaling down about
 
 	// lastBusyTime mark the last time when enough pods run on this machine
