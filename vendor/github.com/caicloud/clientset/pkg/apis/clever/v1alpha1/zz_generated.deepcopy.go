@@ -420,6 +420,13 @@ func (in *Stage) DeepCopy() *Stage {
 func (in *StageMeta) DeepCopyInto(out *StageMeta) {
 	*out = *in
 	in.CreationTime.DeepCopyInto(&out.CreationTime)
+	if in.Annotations != nil {
+		in, out := &in.Annotations, &out.Annotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

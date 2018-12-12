@@ -145,11 +145,12 @@ type Stage struct {
 }
 
 type StageMeta struct {
-	Username     string      `json:"userName"`
-	UID          string      `json:"uid"`
-	Name         string      `json:"name"`
-	Description  string      `json:"description"`
-	CreationTime metav1.Time `json:"creationTime"`
+	Username     string            `json:"userName"`
+	UID          string            `json:"uid"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description"`
+	CreationTime metav1.Time       `json:"creationTime"`
+	Annotations  map[string]string `json:"annotations"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

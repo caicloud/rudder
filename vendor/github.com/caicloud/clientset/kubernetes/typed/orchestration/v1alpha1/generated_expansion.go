@@ -7,3 +7,5 @@ Copyright 2018 caicloud authors. All rights reserved.
 package v1alpha1
 
 type ApplicationExpansion interface{}
+
+type ApplicationDraftExpansion interface{}
