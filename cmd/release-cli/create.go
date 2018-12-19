@@ -6,25 +6,28 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func init() {
 	root.AddCommand(create)
 	fs := create.Flags()
 
-	fs.StringVarP(&createOptions.Server, "server", "s", "", "Kubenetes master host")
-	fs.StringVarP(&createOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
-	fs.StringVarP(&createOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.StringVarP(&createOptions.Server, "server", "s", "", "Kubernetes master host")
+	fs.StringVarP(&createOptions.BearerToken, "bearer-token", "b", "", "Kubernetes master bearer token")
+	fs.StringVarP(&createOptions.Namespace, "namespace", "n", "", "Kubernetes namespace")
 	fs.StringVarP(&createOptions.Values, "values", "c", "", "Chart values file path. Override values.yaml in template")
 	fs.StringVarP(&createOptions.Template, "template", "t", "", "Chart template file path. Can be a tgz package or a chart directory")
+	fs.StringVarP(&createOptions.KubeconfigPath, "kubeconfig", "k", "", "Kubernetes config path")
 }
 
 var createOptions = struct {
-	Server      string
-	BearerToken string
-	Namespace   string
-	Values      string
-	Template    string
+	Server         string
+	BearerToken    string
+	KubeconfigPath string
+	Namespace      string
+	Values         string
+	Template       string
 }{}
 
 var create = &cobra.Command{
@@ -34,8 +37,12 @@ var create = &cobra.Command{
 }
 
 func runCreate(cmd *cobra.Command, args []string) {
-	if createOptions.Server == "" || createOptions.BearerToken == "" {
-		glog.Fatalln("--server and --bearer-token must be set")
+	if createOptions.Server == "" {
+		glog.Fatalln("--server must be set")
+	}
+
+	if createOptions.BearerToken == "" && createOptions.KubeconfigPath == "" {
+		glog.Fatalln("Must specify either --bearer-token or --kubeconfig")
 	}
 
 	if createOptions.Namespace == "" {
@@ -57,16 +64,31 @@ func runCreate(cmd *cobra.Command, args []string) {
 	if err != nil {
 		glog.Fatalf("Unable to load template and values: %v", err)
 	}
-	clientset, err := kubernetes.NewForConfig(&rest.Config{
-		Host:        createOptions.Server,
-		BearerToken: createOptions.BearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	})
-	if err != nil {
-		glog.Fatalln(err)
+
+	var clientset *kubernetes.Clientset
+	if createOptions.KubeconfigPath != "" {
+		cfg, err := clientcmd.BuildConfigFromFlags(createOptions.Server, createOptions.KubeconfigPath)
+		if err != nil {
+			glog.Fatalln("Unable to build k8s Config: %v", err)
+		}
+
+		clientset, err = kubernetes.NewForConfig(cfg)
+		if err != nil {
+			glog.Fatalln(err)
+		}
+	} else {
+		clientset, err = kubernetes.NewForConfig(&rest.Config{
+			Host:        createOptions.Server,
+			BearerToken: createOptions.BearerToken,
+			TLSClientConfig: rest.TLSClientConfig{
+				Insecure: true,
+			},
+		})
+		if err != nil {
+			glog.Fatalln(err)
+		}
 	}
+
 	rel := &v1alpha1.Release{}
 	rel.Name = args[0]
 	rel.Spec.Config = config
