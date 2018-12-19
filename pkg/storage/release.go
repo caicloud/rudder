@@ -392,6 +392,7 @@ func constructReleaseHistory(release *releaseapi.Release, version int32) *releas
 				Name:       release.Name,
 				UID:        release.UID,
 			}},
+			Annotations: release.Annotations,
 		},
 		Spec: releaseapi.ReleaseHistorySpec{
 			Description: release.Spec.Description,
