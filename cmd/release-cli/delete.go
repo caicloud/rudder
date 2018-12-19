@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func init() {
@@ -16,12 +17,14 @@ func init() {
 	fs.StringVarP(&deleteOptions.Server, "server", "s", "", "Kubenetes master host")
 	fs.StringVarP(&deleteOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
 	fs.StringVarP(&deleteOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.StringVarP(&deleteOptions.KubeconfigPath, "kubeconfig", "k", "", "Kubernetes config path")
 }
 
 var deleteOptions = struct {
-	Server      string
-	BearerToken string
-	Namespace   string
+	Server         string
+	BearerToken    string
+	KubeconfigPath string
+	Namespace      string
 }{}
 
 var delete = &cobra.Command{
@@ -31,8 +34,12 @@ var delete = &cobra.Command{
 }
 
 func runDelete(cmd *cobra.Command, args []string) {
-	if deleteOptions.Server == "" || deleteOptions.BearerToken == "" {
-		glog.Fatalln("--server and --bearer-token must be set")
+	if deleteOptions.Server == "" {
+		glog.Fatalln("--server must be set")
+	}
+
+	if deleteOptions.BearerToken == "" && deleteOptions.KubeconfigPath == "" {
+		glog.Fatalln("Must specify either --bearer-token or --kubeconfig")
 	}
 
 	if deleteOptions.Namespace == "" {
@@ -43,15 +50,29 @@ func runDelete(cmd *cobra.Command, args []string) {
 		glog.Fatalln("Must specify release name")
 	}
 
-	clientset, err := kubernetes.NewForConfig(&rest.Config{
-		Host:        deleteOptions.Server,
-		BearerToken: deleteOptions.BearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	})
-	if err != nil {
-		glog.Fatalln(err)
+	var clientset *kubernetes.Clientset
+	var err error
+	if deleteOptions.KubeconfigPath != "" {
+		cfg, err := clientcmd.BuildConfigFromFlags(deleteOptions.Server, deleteOptions.KubeconfigPath)
+		if err != nil {
+			glog.Fatalln("Unable to build k8s Config: %v", err)
+		}
+
+		clientset, err = kubernetes.NewForConfig(cfg)
+		if err != nil {
+			glog.Fatalln(err)
+		}
+	} else {
+		clientset, err = kubernetes.NewForConfig(&rest.Config{
+			Host:        deleteOptions.Server,
+			BearerToken: deleteOptions.BearerToken,
+			TLSClientConfig: rest.TLSClientConfig{
+				Insecure: true,
+			},
+		})
+		if err != nil {
+			glog.Fatalln(err)
+		}
 	}
 
 	for _, name := range args {

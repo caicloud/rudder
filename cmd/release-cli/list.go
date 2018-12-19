@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func init() {
@@ -19,12 +20,15 @@ func init() {
 	fs.StringVarP(&listOptions.Server, "server", "s", "", "Kubenetes master host")
 	fs.StringVarP(&listOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
 	fs.StringVarP(&listOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.StringVarP(&listOptions.KubeconfigPath, "kubeconfig", "k", "", "Kubernetes config path")
+
 }
 
 var listOptions = struct {
-	Server      string
-	BearerToken string
-	Namespace   string
+	Server         string
+	BearerToken    string
+	KubeconfigPath string
+	Namespace      string
 }{}
 
 var list = &cobra.Command{
@@ -34,18 +38,37 @@ var list = &cobra.Command{
 }
 
 func runList(cmd *cobra.Command, args []string) {
-	if listOptions.Server == "" || listOptions.BearerToken == "" {
-		glog.Fatalln("--server and --bearer-token must be set")
+	if listOptions.Server == "" {
+		glog.Fatalln("--server must be set")
 	}
-	clientset, err := kubernetes.NewForConfig(&rest.Config{
-		Host:        listOptions.Server,
-		BearerToken: listOptions.BearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	})
-	if err != nil {
-		glog.Fatalln(err)
+
+	if listOptions.BearerToken == "" && listOptions.KubeconfigPath == "" {
+		glog.Fatalln("Must specify either --bearer-token or --kubeconfig")
+	}
+
+	var clientset *kubernetes.Clientset
+	var err error
+	if listOptions.KubeconfigPath != "" {
+		cfg, err := clientcmd.BuildConfigFromFlags(listOptions.Server, listOptions.KubeconfigPath)
+		if err != nil {
+			glog.Fatalln("Unable to build k8s Config: %v", err)
+		}
+
+		clientset, err = kubernetes.NewForConfig(cfg)
+		if err != nil {
+			glog.Fatalln(err)
+		}
+	} else {
+		clientset, err = kubernetes.NewForConfig(&rest.Config{
+			Host:        listOptions.Server,
+			BearerToken: listOptions.BearerToken,
+			TLSClientConfig: rest.TLSClientConfig{
+				Insecure: true,
+			},
+		})
+		if err != nil {
+			glog.Fatalln(err)
+		}
 	}
 
 	list, err := clientset.ReleaseV1alpha1().Releases(listOptions.Namespace).List(metav1.ListOptions{})
