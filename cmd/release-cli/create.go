@@ -1,12 +1,9 @@
 package main
 
 import (
-	"github.com/caicloud/clientset/kubernetes"
 	"github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func init() {
@@ -37,12 +34,8 @@ var create = &cobra.Command{
 }
 
 func runCreate(cmd *cobra.Command, args []string) {
-	if createOptions.Server == "" {
-		glog.Fatalln("--server must be set")
-	}
-
-	if createOptions.BearerToken == "" && createOptions.KubeconfigPath == "" {
-		glog.Fatalln("Must specify either --bearer-token or --kubeconfig")
+	if createOptions.KubeconfigPath == "" && (createOptions.Server == "" || createOptions.BearerToken == "") {
+		glog.Fatalln("Must specify either --kubeconfig or --bearer-token and --server")
 	}
 
 	if createOptions.Namespace == "" {
@@ -65,28 +58,9 @@ func runCreate(cmd *cobra.Command, args []string) {
 		glog.Fatalf("Unable to load template and values: %v", err)
 	}
 
-	var clientset *kubernetes.Clientset
-	if createOptions.KubeconfigPath != "" {
-		cfg, err := clientcmd.BuildConfigFromFlags(createOptions.Server, createOptions.KubeconfigPath)
-		if err != nil {
-			glog.Fatalln("Unable to build k8s Config: %v", err)
-		}
-
-		clientset, err = kubernetes.NewForConfig(cfg)
-		if err != nil {
-			glog.Fatalln(err)
-		}
-	} else {
-		clientset, err = kubernetes.NewForConfig(&rest.Config{
-			Host:        createOptions.Server,
-			BearerToken: createOptions.BearerToken,
-			TLSClientConfig: rest.TLSClientConfig{
-				Insecure: true,
-			},
-		})
-		if err != nil {
-			glog.Fatalln(err)
-		}
+	clientset, err := newClientSet(createOptions.KubeconfigPath, createOptions.Server, createOptions.BearerToken)
+	if err != nil {
+		glog.Fatalf("Unable to create k8s client set: %v", err)
 	}
 
 	rel := &v1alpha1.Release{}

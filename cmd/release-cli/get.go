@@ -5,22 +5,19 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/caicloud/clientset/kubernetes"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func init() {
 	root.AddCommand(get)
 	fs := get.Flags()
 
-	fs.StringVarP(&getOptions.Server, "server", "s", "", "Kubenetes master host")
-	fs.StringVarP(&getOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
-	fs.StringVarP(&getOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.StringVarP(&getOptions.Server, "server", "s", "", "Kubernetes master host")
+	fs.StringVarP(&getOptions.BearerToken, "bearer-token", "b", "", "Kubernetes master bearer token")
+	fs.StringVarP(&getOptions.Namespace, "namespace", "n", "", "Kubernetes namespace")
 	fs.BoolVarP(&getOptions.Detail, "detail", "d", false, "Show details")
 	fs.StringVarP(&getOptions.KubeconfigPath, "kubeconfig", "k", "", "Kubernetes config path")
 }
@@ -40,12 +37,8 @@ var get = &cobra.Command{
 }
 
 func runGet(cmd *cobra.Command, args []string) {
-	if getOptions.Server == "" {
-		glog.Fatalln("--server must be set")
-	}
-
-	if getOptions.BearerToken == "" && getOptions.KubeconfigPath == "" {
-		glog.Fatalln("Must specify either --bearer-token or --kubeconfig")
+	if getOptions.KubeconfigPath == "" && (getOptions.Server == "" || getOptions.BearerToken == "") {
+		glog.Fatalln("Must specify either --kubeconfig or --bearer-token and --server")
 	}
 
 	if getOptions.Namespace == "" {
@@ -59,29 +52,9 @@ func runGet(cmd *cobra.Command, args []string) {
 		glog.Fatalln("Two or more release names is not allowed")
 	}
 
-	var clientset *kubernetes.Clientset
-	var err error
-	if getOptions.KubeconfigPath != "" {
-		cfg, err := clientcmd.BuildConfigFromFlags(getOptions.Server, getOptions.KubeconfigPath)
-		if err != nil {
-			glog.Fatalln("Unable to build k8s Config: %v", err)
-		}
-
-		clientset, err = kubernetes.NewForConfig(cfg)
-		if err != nil {
-			glog.Fatalln(err)
-		}
-	} else {
-		clientset, err = kubernetes.NewForConfig(&rest.Config{
-			Host:        getOptions.Server,
-			BearerToken: getOptions.BearerToken,
-			TLSClientConfig: rest.TLSClientConfig{
-				Insecure: true,
-			},
-		})
-		if err != nil {
-			glog.Fatalln(err)
-		}
+	clientset, err := newClientSet(getOptions.KubeconfigPath, getOptions.Server, getOptions.BearerToken)
+	if err != nil {
+		glog.Fatalf("Unable to create k8s client set: %v", err)
 	}
 
 	r, err := clientset.ReleaseV1alpha1().Releases(getOptions.Namespace).Get(args[0], metav1.GetOptions{})
