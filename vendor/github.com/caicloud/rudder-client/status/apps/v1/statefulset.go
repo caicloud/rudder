@@ -42,20 +42,20 @@ func newStatefulSetLongRunning(statefulset *appsv1.StatefulSet) LongRunning {
 	return &statefulsetLongRunning{statefulset}
 }
 
-func (d *statefulsetLongRunning) UpdatedRevision(factory listerfactory.ListerFactory) (interface{}, string, error) {
+func (d *statefulsetLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, string, error) {
 	statefulset := d.statefulset
 	updatedRevision := statefulset.Status.UpdateRevision
 	if updatedRevision == "" {
-		return "", "", ErrUpdatedRevisionNotExists
+		return nil, "", ErrUpdatedRevisionNotExists
 	}
-	return updatedRevision, updatedRevision, nil
+	return nil, updatedRevision, nil
 }
 
 func (d *statefulsetLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
-	return pod.Labels[appsv1.StatefulSetRevisionLabel] == updatedRevisionKey
+	return getLabel(pod, appsv1.StatefulSetRevisionLabel) == updatedRevisionKey
 }
 
-func (d *statefulsetLongRunning) Predict(updatedRevision interface{}, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
+func (d *statefulsetLongRunning) PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus {
 	lastEvent := getLatestEventFor(d.statefulset.GroupVersionKind().Kind, d.statefulset, events)
 	for _, c := range dsetErrorEventCases {
 		if c.Match(lastEvent) {
@@ -63,10 +63,10 @@ func (d *statefulsetLongRunning) Predict(updatedRevision interface{}, events []*
 				Phase:   releaseapi.ResourceFailed,
 				Reason:  lastEvent.Reason,
 				Message: lastEvent.Message,
-			}, nil
+			}
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (d *statefulsetLongRunning) DesiredReplics() int32 {

@@ -16,6 +16,7 @@ import (
 	devopsv1 "github.com/caicloud/clientset/pkg/apis/devops/v1"
 	v1alpha2 "github.com/caicloud/clientset/pkg/apis/loadbalance/v1alpha2"
 	loggingv1alpha1 "github.com/caicloud/clientset/pkg/apis/logging/v1alpha1"
+	microservicev1alpha1 "github.com/caicloud/clientset/pkg/apis/microservice/v1alpha1"
 	modelv1alpha1 "github.com/caicloud/clientset/pkg/apis/model/v1alpha1"
 	orchestrationv1alpha1 "github.com/caicloud/clientset/pkg/apis/orchestration/v1alpha1"
 	releasev1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
@@ -87,6 +88,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=logging.caicloud.io, Version=v1alpha1
 	case loggingv1alpha1.SchemeGroupVersion.WithResource("logendpoints"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Logging().V1alpha1().LogEndpoints().Informer()}, nil
+
+		// Group=microservice.caicloud.io, Version=v1alpha1
+	case microservicev1alpha1.SchemeGroupVersion.WithResource("springclouds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Microservice().V1alpha1().Springclouds().Informer()}, nil
 
 		// Group=model.caicloud.io, Version=v1alpha1
 	case modelv1alpha1.SchemeGroupVersion.WithResource("models"):

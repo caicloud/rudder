@@ -88,8 +88,16 @@ type Reference struct {
 
 // ExtraInfo describes the extra infomation of config reference.
 type ExtraInfo struct {
-	Alias       string `json:"alias,omitempty"`
-	ReleaseKind string `json:"releaseKind,omitempty"`
+	Alias        string        `json:"alias,omitempty"`
+	ReleaseKind  string        `json:"releaseKind,omitempty"`
+	ControlledBy *ControlledBy `json:"controlledBy,omitempty"`
+}
+
+type ControlledBy struct {
+	Group string `json:"group"`
+	Kind  string `json:"kind"`
+	Name  string `json:"name"`
+	Alias string `json:"alias"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

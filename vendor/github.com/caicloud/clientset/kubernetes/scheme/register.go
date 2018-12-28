@@ -16,6 +16,7 @@ import (
 	devopsv1 "github.com/caicloud/clientset/pkg/apis/devops/v1"
 	loadbalancev1alpha2 "github.com/caicloud/clientset/pkg/apis/loadbalance/v1alpha2"
 	loggingv1alpha1 "github.com/caicloud/clientset/pkg/apis/logging/v1alpha1"
+	microservicev1alpha1 "github.com/caicloud/clientset/pkg/apis/microservice/v1alpha1"
 	modelv1alpha1 "github.com/caicloud/clientset/pkg/apis/model/v1alpha1"
 	orchestrationv1alpha1 "github.com/caicloud/clientset/pkg/apis/orchestration/v1alpha1"
 	releasev1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
@@ -58,6 +59,7 @@ func AddToScheme(scheme *runtime.Scheme) {
 	devopsv1.AddToScheme(scheme)
 	loadbalancev1alpha2.AddToScheme(scheme)
 	loggingv1alpha1.AddToScheme(scheme)
+	microservicev1alpha1.AddToScheme(scheme)
 	modelv1alpha1.AddToScheme(scheme)
 	orchestrationv1alpha1.AddToScheme(scheme)
 	releasev1alpha1.AddToScheme(scheme)

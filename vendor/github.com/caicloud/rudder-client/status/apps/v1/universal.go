@@ -92,3 +92,11 @@ func getPodStatistics(updated []HyperPod, old []HyperPod) *releaseapi.PodStatist
 
 	return &ret
 }
+
+func getLabel(obj metav1.Object, key string) string {
+	labels := obj.GetLabels()
+	if labels == nil {
+		return ""
+	}
+	return labels[key]
+}

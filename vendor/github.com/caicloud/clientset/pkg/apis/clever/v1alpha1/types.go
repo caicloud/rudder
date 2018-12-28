@@ -44,6 +44,7 @@ const (
 	SKLearn     FrameworkType = "sklearn"
 	TFserving   FrameworkType = "tfserving"
 	OnnxServing FrameworkType = "onnxserving"
+	ServingType FrameworkType = "serving"
 )
 
 const (
@@ -102,7 +103,12 @@ type ProjectSpec struct {
 	// Tools contains all the tools used in a project, e.g. jupyter, tensorboard, etc
 	Tools []Tool `json:"tools"`
 	// Storage contains all storage used in a project.
-	Storage []corev1.VolumeSource `json:"storage"`
+	Storage []ProjectStorage `json:"storage"`
+}
+
+type ProjectStorage struct {
+	VolumeSource corev1.VolumeSource `json:"volumeSource"`
+	Size         string              `json:"size"`
 }
 
 type ProjectStatus struct {
@@ -224,14 +230,12 @@ type Training struct {
 }
 
 type Serving struct {
-	// Inputs dataset for a serving stage.
-	Inputs []Dataset `json:"inputs"`
-	// Image used in serving stage
-	Image ImageFlavor `json:"image"`
-	// Replica used in serving stage.
-	Replica Replica `json:"replica"`
-	// Protocol is protocol used in serving model. e.g. gRPC, RESTful.
-	Protocol []ProtocolType `json:"protocol"`
+	// Model is a model's info in model set.
+	Model ModelInfo `json:"model"`
+	// Developments is development environment serving list.
+	Developments []string `json:"developments"`
+	// Productions is production environment serving list.
+	Productions []string `json:"productions"`
 }
 
 type General struct {
@@ -253,6 +257,11 @@ type General struct {
 	Env []corev1.EnvVar `json:"env"`
 	// Dependence files
 	Dependency Dependency `json:"dependency"`
+}
+
+type ModelInfo struct {
+	Name      string        `json:"name"`
+	Framework FrameworkType `json:"framework"`
 }
 
 // DataSet is struct of Projects Input and Output
@@ -291,14 +300,14 @@ type Flavor struct {
 type FlavorSpec struct {
 	// Template images, can be selected
 	Images []ImageFlavor `json:"images"`
-
 	// Template resource, can be selected
 	Resources []ResourceFlavor `json:"resources"`
 }
 
 type ImageFlavor struct {
-	Name  string `json:"name"`
-	Image string `json:"image"`
+	Name    string `json:"name"`
+	Image   string `json:"image"`
+	Builtin bool   `json:"builtin"`
 }
 
 type Replica struct {

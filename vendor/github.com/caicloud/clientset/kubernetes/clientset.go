@@ -16,6 +16,7 @@ import (
 	devopsv1 "github.com/caicloud/clientset/kubernetes/typed/devops/v1"
 	loadbalancev1alpha2 "github.com/caicloud/clientset/kubernetes/typed/loadbalance/v1alpha2"
 	loggingv1alpha1 "github.com/caicloud/clientset/kubernetes/typed/logging/v1alpha1"
+	microservicev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/microservice/v1alpha1"
 	modelv1alpha1 "github.com/caicloud/clientset/kubernetes/typed/model/v1alpha1"
 	orchestrationv1alpha1 "github.com/caicloud/clientset/kubernetes/typed/orchestration/v1alpha1"
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
@@ -56,6 +57,9 @@ type Interface interface {
 	LoggingV1alpha1() loggingv1alpha1.LoggingV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Logging() loggingv1alpha1.LoggingV1alpha1Interface
+	MicroserviceV1alpha1() microservicev1alpha1.MicroserviceV1alpha1Interface
+	// Deprecated: please explicitly pick a version if possible.
+	Microservice() microservicev1alpha1.MicroserviceV1alpha1Interface
 	ModelV1alpha1() modelv1alpha1.ModelV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Model() modelv1alpha1.ModelV1alpha1Interface
@@ -87,6 +91,7 @@ type Clientset struct {
 	devopsV1              *devopsv1.DevopsV1Client
 	loadbalanceV1alpha2   *loadbalancev1alpha2.LoadbalanceV1alpha2Client
 	loggingV1alpha1       *loggingv1alpha1.LoggingV1alpha1Client
+	microserviceV1alpha1  *microservicev1alpha1.MicroserviceV1alpha1Client
 	modelV1alpha1         *modelv1alpha1.ModelV1alpha1Client
 	orchestrationV1alpha1 *orchestrationv1alpha1.OrchestrationV1alpha1Client
 	releaseV1alpha1       *releasev1alpha1.ReleaseV1alpha1Client
@@ -194,6 +199,17 @@ func (c *Clientset) Logging() loggingv1alpha1.LoggingV1alpha1Interface {
 	return c.loggingV1alpha1
 }
 
+// MicroserviceV1alpha1 retrieves the MicroserviceV1alpha1Client
+func (c *Clientset) MicroserviceV1alpha1() microservicev1alpha1.MicroserviceV1alpha1Interface {
+	return c.microserviceV1alpha1
+}
+
+// Deprecated: Microservice retrieves the default version of MicroserviceClient.
+// Please explicitly pick a version.
+func (c *Clientset) Microservice() microservicev1alpha1.MicroserviceV1alpha1Interface {
+	return c.microserviceV1alpha1
+}
+
 // ModelV1alpha1 retrieves the ModelV1alpha1Client
 func (c *Clientset) ModelV1alpha1() modelv1alpha1.ModelV1alpha1Interface {
 	return c.modelV1alpha1
@@ -298,6 +314,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.microserviceV1alpha1, err = microservicev1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.modelV1alpha1, err = modelv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -343,6 +363,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.devopsV1 = devopsv1.NewForConfigOrDie(c)
 	cs.loadbalanceV1alpha2 = loadbalancev1alpha2.NewForConfigOrDie(c)
 	cs.loggingV1alpha1 = loggingv1alpha1.NewForConfigOrDie(c)
+	cs.microserviceV1alpha1 = microservicev1alpha1.NewForConfigOrDie(c)
 	cs.modelV1alpha1 = modelv1alpha1.NewForConfigOrDie(c)
 	cs.orchestrationV1alpha1 = orchestrationv1alpha1.NewForConfigOrDie(c)
 	cs.releaseV1alpha1 = releasev1alpha1.NewForConfigOrDie(c)
@@ -366,6 +387,7 @@ func New(c rest.Interface) *Clientset {
 	cs.devopsV1 = devopsv1.New(c)
 	cs.loadbalanceV1alpha2 = loadbalancev1alpha2.New(c)
 	cs.loggingV1alpha1 = loggingv1alpha1.New(c)
+	cs.microserviceV1alpha1 = microservicev1alpha1.New(c)
 	cs.modelV1alpha1 = modelv1alpha1.New(c)
 	cs.orchestrationV1alpha1 = orchestrationv1alpha1.New(c)
 	cs.releaseV1alpha1 = releasev1alpha1.New(c)
