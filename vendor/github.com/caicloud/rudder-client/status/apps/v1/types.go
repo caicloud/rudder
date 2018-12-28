@@ -12,16 +12,22 @@ import (
 var (
 	// ErrUpdatedRevisionNotExists ...
 	ErrUpdatedRevisionNotExists = fmt.Errorf("There is no updated revision found for this resource")
+
+	noUpdatedRevisionStatus = releaseapi.ResourceStatus{
+		Phase:   releaseapi.ResourceProgressing,
+		Reason:  "NoUpdatedRevision",
+		Message: ErrUpdatedRevisionNotExists.Error(),
+	}
 )
 
 // LongRunning ...
 type LongRunning interface {
+	// PredictRevision predicts longRunning resourceStatus from events
+	PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus
 	// UpdatedRevision returns the updated revision and key
-	UpdatedRevision(factory listerfactory.ListerFactory) (updatedRevision interface{}, updatedRevisionKey string, err error)
+	PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (resourceStatus *releaseapi.ResourceStatus, updatedRevisionKey string, err error)
 	// IsUpdatedPod checks if the pod is updated
 	IsUpdatedPod(pod *corev1.Pod, updateRevisionKey string) bool
-	// Predict predicts resourceStatus from updatedRevision and events before judging from pods status
-	Predict(updatedRevision interface{}, events []*corev1.Event) (*releaseapi.ResourceStatus, error)
 	// DesiredReplics returns the desired replicas of this resource
 	DesiredReplics() int32
 }

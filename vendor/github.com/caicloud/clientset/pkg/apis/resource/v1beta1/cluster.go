@@ -205,11 +205,15 @@ type AzureObjectMeta struct {
 	GroupName string `json:"groupName,omitempty"`
 }
 
+type AzureObjectReference = AzureObjectMeta
+
 type AzureClusterCloudProviderConfig struct {
 	// Location - cluster azure resource location.
 	Location string `json:"location,omitempty"`
 	// VirtualNetwork - cluster azure virtual network
 	VirtualNetwork AzureVirtualNetwork `json:"virtualNetwork"`
+	// LoadBalancer - ha cluster vip is azure lb
+	LoadBalancer *AzureLoadBalancer `json:"loadBalancer,omitempty"`
 }
 
 type AzureMachineCloudProviderConfig struct {
@@ -222,20 +226,25 @@ type AzureMachineCloudProviderConfig struct {
 	OSDisk            AzureDisk               `json:"osDisk"`
 	DataDisks         []AzureDisk             `json:"dataDisks"`
 	NetworkInterfaces []AzureNetworkInterface `json:"networkInterfaces"`
+	AvailabilitySet   *AzureObjectReference   `json:"availabilitySet,omitempty"`
 }
 
 type AzureVirtualNetwork struct {
 	AzureObjectMeta
 }
+
 type AzureSubnet struct {
 	AzureObjectMeta
 }
+
 type AzureSecurityGroup struct {
 	AzureObjectMeta
 }
+
 type AzureVMSize struct {
 	AzureObjectMeta
 }
+
 type AzureImageReference struct {
 	AzureObjectMeta
 	Publisher string `json:"publisher,omitempty"`
@@ -243,28 +252,106 @@ type AzureImageReference struct {
 	Sku       string `json:"sku,omitempty"`
 	Version   string `json:"version,omitempty"`
 }
+
 type AzureNetworkInterface struct {
 	AzureObjectMeta
 	Primary          bool               `json:"primary"`
 	SecurityGroup    AzureSecurityGroup `json:"securityGroup"`
 	IPConfigurations []AzureIpConfig    `json:"ipConfigurations"`
 }
+
 type AzurePublicIP struct {
 	AzureObjectMeta
 	PublicIPAddress string `json:"publicIPAddress"`
 }
+
 type AzureIpConfig struct {
 	AzureObjectMeta
-	Primary          bool           `json:"primary"`
+	Primary          bool           `json:"primary,omitempty"`
 	Subnet           AzureSubnet    `json:"subnet"`
 	PrivateIPAddress string         `json:"privateIPAddress"`
 	PublicIP         *AzurePublicIP `json:"publicIPAddress,omitempty"`
 }
+
 type AzureDisk struct {
 	AzureObjectMeta
 	SizeGB  int32  `json:"sizeGB"`
 	SkuName string `json:"skuName"`         // ssd/hdd and theirs upper type
 	Owner   string `json:"owner,omitempty"` // when cleanup, only controller created can be delete
+}
+
+type AzureAvailabilitySet struct { // for future? not used now
+	AzureObjectMeta
+	// PlatformUpdateDomainCount - Update Domain count.
+	PlatformUpdateDomainCount int32 `json:"platformUpdateDomainCount,omitempty"`
+	// PlatformFaultDomainCount - Fault Domain count.
+	PlatformFaultDomainCount int32 `json:"platformFaultDomainCount,omitempty"`
+	// VirtualMachines - A list of references to all virtual machines in the availability set.
+	VirtualMachines []AzureObjectReference `json:"virtualMachines"`
+	// SkuName - Sku name of the availability set, only name is required to be set. See AvailabilitySetSkuTypes for possible set of values. Use 'Aligned' for virtual machines with managed disks and 'Classic' for virtual machines with unmanaged disks. Default value is 'Classic'.
+	SkuName string `json:"skuName"`
+}
+
+type AzureFrontendIPConfiguration struct {
+	AzureObjectMeta
+	// PrivateIPAddress - The private IP address of the IP configuration.
+	PrivateIPAddress string `json:"privateIPAddress,omitempty"`
+	// PublicIP - The reference of the Public IP resource.
+	PublicIP *AzurePublicIP `json:"publicIP,omitempty"`
+	// Subnet - The reference of the subnet resource.
+	Subnet AzureSubnet `json:"subnet,omitempty"`
+}
+
+type AzureBackendAddressPool struct {
+	AzureObjectMeta
+	// BackendIPConfigurations - Gets collection of references to IP addresses defined in network interfaces.
+	BackendIPConfigurations []AzureIpConfig `json:"backendIPConfigurations"`
+}
+
+type AzureLoadBalancerProbe struct {
+	AzureObjectMeta
+	// Protocol - The protocol of the end point. Possible values are: 'Http' or 'Tcp'. If 'Tcp' is specified, a received ACK is required for the probe to be successful. If 'Http' is specified, a 200 OK response from the specifies URI is required for the probe to be successful. Possible values include: 'ProbeProtocolHTTP', 'ProbeProtocolTCP'
+	Protocol string `json:"protocol,omitempty"`
+	// Port - The port for communicating the probe. Possible values range from 1 to 65535, inclusive.
+	Port int32 `json:"port,omitempty"`
+	// IntervalInSeconds - The interval, in seconds, for how frequently to probe the endpoint for health status. Typically, the interval is slightly less than half the allocated timeout period (in seconds) which allows two full probes before taking the instance out of rotation. The default value is 15, the minimum value is 5.
+	IntervalInSeconds int32 `json:"intervalInSeconds,omitempty"`
+	// NumberOfProbes - The number of probes where if no response, will result in stopping further traffic from being delivered to the endpoint. This values allows endpoints to be taken out of rotation faster or slower than the typical times used in Azure.
+	NumberOfProbes int32 `json:"numberOfProbes,omitempty"`
+}
+
+type AzureLoadBalancingRule struct {
+	AzureObjectMeta
+	// Protocol - Possible values include: 'TransportProtocolUDP', 'TransportProtocolTCP', 'TransportProtocolAll'
+	Protocol string `json:"protocol,omitempty"`
+	// LoadDistribution - The load distribution policy for this rule. Possible values are 'Default', 'SourceIP', and 'SourceIPProtocol'. Possible values include: 'Default', 'SourceIP', 'SourceIPProtocol'
+	LoadDistribution string `json:"loadDistribution,omitempty"`
+	// FrontendPort - The port for the external endpoint. Port numbers for each rule must be unique within the Load Balancer. Acceptable values are between 0 and 65534. Note that value 0 enables "Any Port"
+	FrontendPort int32 `json:"frontendPort,omitempty"`
+	// BackendPort - The port used for internal connections on the endpoint. Acceptable values are between 0 and 65535. Note that value 0 enables "Any Port"
+	BackendPort int32 `json:"backendPort,omitempty"`
+	// IdleTimeoutInMinutes - The timeout for the TCP idle connection. The value can be set between 4 and 30 minutes. The default value is 4 minutes. This element is only used when the protocol is set to TCP.
+	IdleTimeoutInMinutes int32 `json:"idleTimeoutInMinutes,omitempty"`
+	// EnableFloatingIP - Configures a virtual machine's endpoint for the floating IP capability required to configure a SQL AlwaysOn Availability Group. This setting is required when using the SQL AlwaysOn Availability Groups in SQL server. This setting can't be changed after you create the endpoint.
+	EnableFloatingIP bool `json:"enableFloatingIP,omitempty"`
+	// DisableOutboundSnat - Configures SNAT for the VMs in the backend pool to use the publicIP address specified in the frontend of the load balancing rule.
+	DisableOutboundSnat bool `json:"disableOutboundSnat,omitempty"`
+	// ProvisioningState - Gets the provisioning state of the PublicIP resource. Possible values are: 'Updating', 'Deleting', and 'Failed'.
+	ProvisioningState string `json:"provisioningState,omitempty"`
+}
+
+type AzureLoadBalancer struct {
+	AzureObjectMeta
+	// SkuName - Name of a load balancer SKU. Possible values include: 'LoadBalancerSkuNameBasic', 'LoadBalancerSkuNameStandard'
+	SkuName string `json:"skuName"`
+	// FrontendIPConfigurations - Object representing the frontend IPs to be used for the load balancer
+	FrontendIPConfigurations []AzureFrontendIPConfiguration `json:"frontendIPConfigurations"`
+	// BackendAddressPools - Collection of backend address pools used by a load balancer
+	BackendAddressPools []AzureBackendAddressPool `json:"backendAddressPools"`
+	// Probes - Collection of probe objects used in the load balancer
+	Probes []AzureLoadBalancerProbe `json:"probes"`
+	// LoadBalancingRules - Object collection representing the load balancing rules Gets the provisioning
+	LoadBalancingRules []AzureLoadBalancingRule `json:"loadBalancingRules,omitempty"`
 }
 
 // +genclient

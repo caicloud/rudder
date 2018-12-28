@@ -47,7 +47,7 @@ func newDaemonSetLongRunning(daemonset *appsv1.DaemonSet) LongRunning {
 	return &daemonsetLongRunning{daemonset}
 }
 
-func (d *daemonsetLongRunning) UpdatedRevision(factory listerfactory.ListerFactory) (interface{}, string, error) {
+func (d *daemonsetLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, string, error) {
 	daemonset := d.daemonset
 
 	historyList, err := getHistoriesForDaemonSet(factory.Apps().V1().ControllerRevisions(), daemonset)
@@ -62,14 +62,14 @@ func (d *daemonsetLongRunning) UpdatedRevision(factory listerfactory.ListerFacto
 		return nil, "", ErrUpdatedRevisionNotExists
 	}
 
-	return history, history.Labels[appsv1.DefaultDaemonSetUniqueLabelKey], nil
+	return nil, getLabel(history, appsv1.DefaultDaemonSetUniqueLabelKey), nil
 }
 
 func (d *daemonsetLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
-	return pod.Labels[appsv1.DefaultDaemonSetUniqueLabelKey] == updatedRevisionKey
+	return getLabel(pod, appsv1.DefaultDaemonSetUniqueLabelKey) == updatedRevisionKey
 }
 
-func (d *daemonsetLongRunning) Predict(updatedRevision interface{}, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
+func (d *daemonsetLongRunning) PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus {
 	lastEvent := getLatestEventFor(d.daemonset.GroupVersionKind().Kind, d.daemonset, events)
 	for _, c := range dsetErrorEventCases {
 		if c.Match(lastEvent) {
@@ -77,10 +77,14 @@ func (d *daemonsetLongRunning) Predict(updatedRevision interface{}, events []*co
 				Phase:   releaseapi.ResourceFailed,
 				Reason:  lastEvent.Reason,
 				Message: lastEvent.Message,
-			}, nil
+			}
 		}
 	}
-	return nil, nil
+	return nil
+}
+
+func (d *daemonsetLongRunning) PredictRevision(updatedRevision interface{}, events []*corev1.Event) *releaseapi.ResourceStatus {
+	return nil
 }
 
 func (d *daemonsetLongRunning) DesiredReplics() int32 {

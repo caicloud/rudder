@@ -38,18 +38,33 @@ func newDeploymetLongRunning(deployment *appsv1.Deployment) LongRunning {
 	return &deploymentLongRunning{deployment}
 }
 
-func (d *deploymentLongRunning) UpdatedRevision(factory listerfactory.ListerFactory) (interface{}, string, error) {
+func (d *deploymentLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, string, error) {
 	deployment := d.deployment
 
 	rsList, err := getReplicaSetsforDeployment(factory.Apps().V1().ReplicaSets(), deployment)
 	if err != nil {
 		return nil, "", err
 	}
+
 	rs := getUpdatedReplicaSetForDeployment(deployment, rsList)
 	if rs == nil {
 		return nil, "", ErrUpdatedRevisionNotExists
 	}
-	return rs, string(rs.UID), nil
+
+	// a replica set when one of its pods fails to be created
+	// due to insufficient quota, limit ranges, pod security policy, node selectors, etc. or deleted
+	// due to kubelet being down or finalizers are failing.
+	for _, c := range rs.Status.Conditions {
+		if c.Type == appsv1.ReplicaSetReplicaFailure &&
+			c.Status == corev1.ConditionTrue {
+			return &releaseapi.ResourceStatus{
+				Phase:   releaseapi.ResourceFailed,
+				Reason:  c.Reason,
+				Message: c.Message,
+			}, string(rs.UID), nil
+		}
+	}
+	return nil, string(rs.UID), nil
 }
 
 func (d *deploymentLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
@@ -62,25 +77,8 @@ func (d *deploymentLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey
 	return latest
 }
 
-func (d *deploymentLongRunning) Predict(updatedRevision interface{}, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
-	rs, ok := updatedRevision.(*appsv1.ReplicaSet)
-	if !ok {
-		return nil, fmt.Errorf("the updatedRevision must be ReplicaSet")
-	}
-	// a replica set when one of its pods fails to be created
-	// due to insufficient quota, limit ranges, pod security policy, node selectors, etc. or deleted
-	// due to kubelet being down or finalizers are failing.
-	for _, c := range rs.Status.Conditions {
-		if c.Type == appsv1.ReplicaSetReplicaFailure &&
-			c.Status == corev1.ConditionTrue {
-			return &releaseapi.ResourceStatus{
-				Phase:   releaseapi.ResourceFailed,
-				Reason:  c.Reason,
-				Message: c.Message,
-			}, nil
-		}
-	}
-	return nil, nil
+func (d *deploymentLongRunning) PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus {
+	return nil
 }
 
 func (d *deploymentLongRunning) DesiredReplics() int32 {
