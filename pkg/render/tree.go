@@ -157,8 +157,9 @@ func (n *node) find(paths []string) (*node, error) {
 	if len(paths) <= 0 {
 		return nil, fmt.Errorf("there is no path in paths")
 	}
-	if n.path != paths[0] {
-		return nil, fmt.Errorf("paths have a diverse root node: %s", paths[0])
+	if len(paths) == 1 {
+		// we don't care about the root name
+		return n, nil
 	}
 	parent := n
 	for _, path := range paths[1:] {
