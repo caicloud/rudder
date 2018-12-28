@@ -18,8 +18,8 @@ func judgePod(pod *v1.Pod) PodStatus {
 	initContainers := len(pod.Spec.InitContainers)
 	totalContainers := len(pod.Spec.Containers)
 	phase := pod.Status.Phase
-	reason := chose(string(pod.Status.Phase), pod.Status.Reason)
-	message := pod.Status.Message
+	reason := choseReason(string(pod.Status.Phase), pod.Status.Reason)
+	message := ""
 
 	if phase == v1.PodPending {
 		// detect pending error
@@ -76,7 +76,7 @@ func judgePod(pod *v1.Pod) PodStatus {
 			restarts += int(container.RestartCount)
 
 			state, stateReason, stateMessage := judgeContainerState(container.State)
-			reason = chose(reason, stateReason)
+			reason = choseReason(reason, stateReason)
 			message = chose(message, stateMessage)
 			switch state {
 			case containerWaiting:
@@ -89,7 +89,7 @@ func judgePod(pod *v1.Pod) PodStatus {
 					phase = PodError
 					lastState, lastReason, lastMessage := judgeContainerState(container.LastTerminationState)
 					if lastState == containerTerminated {
-						reason = chose(reason, lastReason)
+						reason = choseReason(reason, lastReason)
 						message = chose(message, lastMessage)
 					}
 				}
@@ -172,5 +172,17 @@ func chose(origin, newOne string) string {
 	if newOne != "" {
 		return newOne
 	}
+	return origin
+}
+
+func choseReason(origin, newOne string) string {
+	if origin == "" {
+		return newOne
+	}
+
+	if newOne != "" && newOne != "Error" {
+		return newOne
+	}
+
 	return origin
 }
