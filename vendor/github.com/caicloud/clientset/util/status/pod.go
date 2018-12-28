@@ -19,7 +19,7 @@ func judgePod(pod *v1.Pod) PodStatus {
 	totalContainers := len(pod.Spec.Containers)
 	phase := pod.Status.Phase
 	reason := chose(string(pod.Status.Phase), pod.Status.Reason)
-	message := ""
+	message := pod.Status.Message
 
 	if phase == v1.PodPending {
 		// detect pending error
@@ -126,7 +126,6 @@ func judgePod(pod *v1.Pod) PodStatus {
 		ready = false
 		if pod.Status.Reason == NodeUnreachablePodReason {
 			phase = v1.PodUnknown
-			reason = "Unknown"
 		} else {
 			if phase == v1.PodRunning {
 				// only if phase is Running, change phase to terminating

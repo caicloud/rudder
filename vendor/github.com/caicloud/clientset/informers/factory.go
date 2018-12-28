@@ -18,6 +18,7 @@ import (
 	devops "github.com/caicloud/clientset/informers/devops"
 	loadbalance "github.com/caicloud/clientset/informers/loadbalance"
 	logging "github.com/caicloud/clientset/informers/logging"
+	microservice "github.com/caicloud/clientset/informers/microservice"
 	model "github.com/caicloud/clientset/informers/model"
 	orchestration "github.com/caicloud/clientset/informers/orchestration"
 	release "github.com/caicloud/clientset/informers/release"
@@ -96,6 +97,7 @@ type SharedInformerFactory interface {
 	Devops() devops.Interface
 	Loadbalance() loadbalance.Interface
 	Logging() logging.Interface
+	Microservice() microservice.Interface
 	Model() model.Interface
 	Orchestration() orchestration.Interface
 	Release() release.Interface
@@ -137,6 +139,10 @@ func (f *sharedInformerFactory) Loadbalance() loadbalance.Interface {
 
 func (f *sharedInformerFactory) Logging() logging.Interface {
 	return logging.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Microservice() microservice.Interface {
+	return microservice.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Model() model.Interface {

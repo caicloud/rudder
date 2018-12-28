@@ -9,17 +9,28 @@ import (
 )
 
 var (
+	// error event case will change the pod's status no matter what state it is in now
 	errorEventCases = []event.EventCase{
 		{
-			// Liveness and Readiness probe failed
+			// Liveness probe failed
 			EventType: v1.EventTypeWarning,
 			Reason:    event.ContainerUnhealthy,
-			MsgKeys:   []string{"probe failed"},
+			MsgKeys:   []string{"Liveness probe failed"},
 		},
 		{
 			// failed to mount volume
 			EventType: v1.EventTypeWarning,
 			Reason:    event.FailedMountVolume,
+		},
+	}
+
+	// warning event case change the pod's status only if it is not in PodRunning, PodSucceeded
+	warningEventCase = []event.EventCase{
+		{
+			// Readiness probe failed
+			EventType: v1.EventTypeWarning,
+			Reason:    event.ContainerUnhealthy,
+			MsgKeys:   []string{"Readiness probe failed"},
 		},
 	}
 )
@@ -34,6 +45,7 @@ func JudgePodStatus(pod *v1.Pod, events []*v1.Event) PodStatus {
 	status := judgePod(pod)
 	// only the latest event is useful
 	e := getLatestEventForPod(pod, events)
+	// error event case will change the pod's status no matter what state it is in now
 	for _, c := range errorEventCases {
 		if c.Match(e) {
 			status.Phase = PodError
@@ -43,10 +55,23 @@ func JudgePodStatus(pod *v1.Pod, events []*v1.Event) PodStatus {
 		}
 	}
 
+	if status.Phase != PodRunning && status.Phase != PodSucceeded {
+		// warning event case change the pod's status only if it is not PodRunning, PodSucceeded
+		for _, c := range warningEventCase {
+			if c.Match(e) {
+				status.Phase = PodError
+				status.Reason = e.Reason
+				status.Message = e.Message
+				break
+			}
+		}
+	}
+
 	switch status.Phase {
 	case PodRunning, PodSucceeded:
 		status.State = PodNormal
-		status.Ready = true
+		// when phase == Succeded, the pod is not ready
+		// status.Ready = true
 	case PodFailed, PodError, PodUnknown:
 		status.State = PodAbnormal
 		status.Ready = false

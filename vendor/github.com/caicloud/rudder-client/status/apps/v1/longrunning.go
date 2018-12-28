@@ -49,20 +49,23 @@ func newLongRunning(factory listerfactory.ListerFactory, obj runtime.Object) (*l
 }
 
 func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error) {
-	// get updatedRevision
-	updatedRevision, updatedRevisionKey, err := d.delegate.UpdatedRevision(d.factory)
+	// predicts resource status from events
+	// remain it util we get PodStatistics
+	predictEventsIssue := d.delegate.PredictEvents(d.events)
+
+	// predicts resource status from updated revision and get updated revision key
+	predictRevisionIssue, updatedRevisionKey, err := d.delegate.PredictUpdatedRevision(d.factory, d.events)
 	if err != nil && err != ErrUpdatedRevisionNotExists {
 		return releaseapi.ResourceStatusFrom(""), err
 	}
 
-	if err == ErrUpdatedRevisionNotExists {
-		return releaseapi.ResourceStatus{
-			Phase:   releaseapi.ResourceProgressing,
-			Reason:  "NoUpdateRevision",
-			Message: err.Error(),
-		}, nil
+	if err == ErrUpdatedRevisionNotExists && predictEventsIssue == nil {
+		// only if there is no predicted events error and no updated revison,
+		// then we can return noUpdatedRevisionStatus
+		return noUpdatedRevisionStatus, nil
 	}
 
+	// we should get pod statistics before returning predict revision status
 	// separate pods inte updated and old
 	updated, old, err := d.Pods(updatedRevisionKey)
 	if err != nil {
@@ -76,13 +79,12 @@ func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error
 		}
 	}()
 
-	// predict resourceStatus from updatedRevision or events
-	predict, err := d.delegate.Predict(updatedRevision, d.events)
-	if err != nil {
-		return releaseapi.ResourceStatusFrom(""), err
+	if predictEventsIssue != nil {
+		return *predictEventsIssue, nil
 	}
-	if predict != nil {
-		return *predict, nil
+
+	if predictRevisionIssue != nil {
+		return *predictRevisionIssue, nil
 	}
 
 	// judge status from pods
