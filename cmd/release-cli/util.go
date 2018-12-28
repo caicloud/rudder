@@ -7,7 +7,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caicloud/clientset/kubernetes"
 	"github.com/ghodss/yaml"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 )
@@ -133,4 +136,34 @@ func writeToTar(out *tar.Writer, name string, body []byte) error {
 		return err
 	}
 	return nil
+}
+
+// newClientSet creates a k8s client set.
+func newClientSet(kubeconfigPath, server, bearerToken string) (*kubernetes.Clientset, error) {
+	var clientset *kubernetes.Clientset
+	var err error
+	if kubeconfigPath != "" {
+		cfg, err := clientcmd.BuildConfigFromFlags(server, kubeconfigPath)
+		if err != nil {
+			return clientset, err
+		}
+
+		clientset, err = kubernetes.NewForConfig(cfg)
+		if err != nil {
+			return clientset, err
+		}
+	} else {
+		clientset, err = kubernetes.NewForConfig(&rest.Config{
+			Host:        server,
+			BearerToken: bearerToken,
+			TLSClientConfig: rest.TLSClientConfig{
+				Insecure: true,
+			},
+		})
+		if err != nil {
+			return clientset, err
+		}
+	}
+
+	return clientset, nil
 }

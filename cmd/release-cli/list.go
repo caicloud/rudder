@@ -4,27 +4,28 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caicloud/clientset/kubernetes"
 	"github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 )
 
 func init() {
 	root.AddCommand(list)
 	fs := list.Flags()
 
-	fs.StringVarP(&listOptions.Server, "server", "s", "", "Kubenetes master host")
-	fs.StringVarP(&listOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
-	fs.StringVarP(&listOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.StringVarP(&listOptions.Server, "server", "s", "", "Kubernetes master host")
+	fs.StringVarP(&listOptions.BearerToken, "bearer-token", "b", "", "Kubernetes master bearer token")
+	fs.StringVarP(&listOptions.Namespace, "namespace", "n", "", "Kubernetes namespace")
+	fs.StringVarP(&listOptions.KubeconfigPath, "kubeconfig", "k", "", "Kubernetes config path")
+
 }
 
 var listOptions = struct {
-	Server      string
-	BearerToken string
-	Namespace   string
+	Server         string
+	BearerToken    string
+	KubeconfigPath string
+	Namespace      string
 }{}
 
 var list = &cobra.Command{
@@ -34,18 +35,13 @@ var list = &cobra.Command{
 }
 
 func runList(cmd *cobra.Command, args []string) {
-	if listOptions.Server == "" || listOptions.BearerToken == "" {
-		glog.Fatalln("--server and --bearer-token must be set")
+	if listOptions.KubeconfigPath == "" && (listOptions.Server == "" || listOptions.BearerToken == "") {
+		glog.Fatalln("Must specify either --kubeconfig or --bearer-token and --server")
 	}
-	clientset, err := kubernetes.NewForConfig(&rest.Config{
-		Host:        listOptions.Server,
-		BearerToken: listOptions.BearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	})
+
+	clientset, err := newClientSet(listOptions.KubeconfigPath, listOptions.Server, listOptions.BearerToken)
 	if err != nil {
-		glog.Fatalln(err)
+		glog.Fatalf("Unable to create k8s client set: %v", err)
 	}
 
 	list, err := clientset.ReleaseV1alpha1().Releases(listOptions.Namespace).List(metav1.ListOptions{})

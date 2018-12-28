@@ -3,25 +3,25 @@ package main
 import (
 	"fmt"
 
-	"github.com/caicloud/clientset/kubernetes"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/rest"
 )
 
 func init() {
 	root.AddCommand(delete)
 	fs := delete.Flags()
 
-	fs.StringVarP(&deleteOptions.Server, "server", "s", "", "Kubenetes master host")
-	fs.StringVarP(&deleteOptions.BearerToken, "bearer-token", "b", "", "Kubenetes master bearer token")
-	fs.StringVarP(&deleteOptions.Namespace, "namespace", "n", "", "Kubenetes namespace")
+	fs.StringVarP(&deleteOptions.Server, "server", "s", "", "Kubernetes master host")
+	fs.StringVarP(&deleteOptions.BearerToken, "bearer-token", "b", "", "Kubernetes master bearer token")
+	fs.StringVarP(&deleteOptions.Namespace, "namespace", "n", "", "Kubernetes namespace")
+	fs.StringVarP(&deleteOptions.KubeconfigPath, "kubeconfig", "k", "", "Kubernetes config path")
 }
 
 var deleteOptions = struct {
-	Server      string
-	BearerToken string
-	Namespace   string
+	Server         string
+	BearerToken    string
+	KubeconfigPath string
+	Namespace      string
 }{}
 
 var delete = &cobra.Command{
@@ -31,8 +31,8 @@ var delete = &cobra.Command{
 }
 
 func runDelete(cmd *cobra.Command, args []string) {
-	if deleteOptions.Server == "" || deleteOptions.BearerToken == "" {
-		glog.Fatalln("--server and --bearer-token must be set")
+	if deleteOptions.KubeconfigPath == "" && (deleteOptions.Server == "" || deleteOptions.BearerToken == "") {
+		glog.Fatalln("Must specify either --kubeconfig or --bearer-token and --server")
 	}
 
 	if deleteOptions.Namespace == "" {
@@ -43,15 +43,9 @@ func runDelete(cmd *cobra.Command, args []string) {
 		glog.Fatalln("Must specify release name")
 	}
 
-	clientset, err := kubernetes.NewForConfig(&rest.Config{
-		Host:        deleteOptions.Server,
-		BearerToken: deleteOptions.BearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	})
+	clientset, err := newClientSet(deleteOptions.KubeconfigPath, deleteOptions.Server, deleteOptions.BearerToken)
 	if err != nil {
-		glog.Fatalln(err)
+		glog.Fatalf("Unable to create k8s client set: %v", err)
 	}
 
 	for _, name := range args {
