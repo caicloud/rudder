@@ -12,12 +12,6 @@ import (
 var (
 	// ErrUpdatedRevisionNotExists ...
 	ErrUpdatedRevisionNotExists = fmt.Errorf("There is no updated revision found for this resource")
-
-	noUpdatedRevisionStatus = releaseapi.ResourceStatus{
-		Phase:   releaseapi.ResourceProgressing,
-		Reason:  "NoUpdatedRevision",
-		Message: ErrUpdatedRevisionNotExists.Error(),
-	}
 )
 
 // LongRunning ...
