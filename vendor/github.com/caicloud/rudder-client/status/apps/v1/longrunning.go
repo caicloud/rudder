@@ -61,8 +61,15 @@ func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error
 
 	if err == ErrUpdatedRevisionNotExists && predictEventsIssue == nil {
 		// only if there is no predicted events error and no updated revison,
-		// then we can return noUpdatedRevisionStatus
-		return noUpdatedRevisionStatus, nil
+		// then we can return immediately
+		if d.delegate.DesiredReplics() == 0 {
+			return releaseapi.ResourceStatusFrom(releaseapi.ResourceSuspended), nil
+		}
+		return releaseapi.ResourceStatus{
+			Phase:   releaseapi.ResourceProgressing,
+			Reason:  "NoUpdatedRevision",
+			Message: ErrUpdatedRevisionNotExists.Error(),
+		}, nil
 	}
 
 	// we should get pod statistics before returning predict revision status
