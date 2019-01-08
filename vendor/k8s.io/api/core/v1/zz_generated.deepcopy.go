@@ -787,6 +787,11 @@ func (in *Container) DeepCopyInto(out *Container) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
+	if in.ExtendedResourceClaims != nil {
+		in, out := &in.ExtendedResourceClaims, &out.ExtendedResourceClaims
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -2729,6 +2734,21 @@ func (in *NodeStatus) DeepCopyInto(out *NodeStatus) {
 	if in.VolumesAttached != nil {
 		in, out := &in.VolumesAttached, &out.VolumesAttached
 		*out = make([]AttachedVolume, len(*in))
+		copy(*out, *in)
+	}
+	if in.ExtendedResourceAllocatable != nil {
+		in, out := &in.ExtendedResourceAllocatable, &out.ExtendedResourceAllocatable
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.ExtendedResourceCapacity != nil {
+		in, out := &in.ExtendedResourceCapacity, &out.ExtendedResourceCapacity
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.ExtendedResourceRemoved != nil {
+		in, out := &in.ExtendedResourceRemoved, &out.ExtendedResourceRemoved
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	return
