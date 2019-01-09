@@ -1746,7 +1746,7 @@ type CSIPersistentVolumeSource struct {
 
 	// Filesystem type to mount.
 	// Must be a filesystem type supported by the host operating system.
-	// Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+	// Ex. "ext4", "xfs", "ntfs".
 	// +optional
 	FSType string `json:"fsType,omitempty" protobuf:"bytes,4,opt,name=fsType"`
 
@@ -1821,7 +1821,7 @@ type VolumeMount struct {
 	SubPath string `json:"subPath,omitempty" protobuf:"bytes,4,opt,name=subPath"`
 	// mountPropagation determines how mounts are propagated from the host
 	// to container and the other way around.
-	// When not set, MountPropagationHostToContainer is used.
+	// When not set, MountPropagationNone is used.
 	// This field is beta in 1.10.
 	// +optional
 	MountPropagation *MountPropagationMode `json:"mountPropagation,omitempty" protobuf:"bytes,5,opt,name=mountPropagation,casttype=MountPropagationMode"`
@@ -1831,6 +1831,12 @@ type VolumeMount struct {
 type MountPropagationMode string
 
 const (
+	// MountPropagationNone means that the volume in a container will
+	// not receive new mounts from the host or other containers, and filesystems
+	// mounted inside the container won't be propagated to the host or other
+	// containers.
+	// Note that this mode corresponds to "private" in Linux terminology.
+	MountPropagationNone MountPropagationMode = "None"
 	// MountPropagationHostToContainer means that the volume in a container will
 	// receive new mounts from the host or other containers, but filesystems
 	// mounted inside the container won't be propagated to the host or other
@@ -2271,6 +2277,10 @@ type Container struct {
 	// Default is false.
 	// +optional
 	TTY bool `json:"tty,omitempty" protobuf:"varint,18,opt,name=tty"`
+
+	// ExtendedResourceClaims is the claim names array users asked for this container
+	// +optional
+	ExtendedResourceClaims []string `json:"extendedResourceClaims,omitempty" protobuf:"bytes,22,rep,name=extendedResourceClaims"`
 }
 
 // Handler defines a specific action that should be taken
@@ -3932,6 +3942,19 @@ type NodeStatus struct {
 	// List of volumes that are attached to the node.
 	// +optional
 	VolumesAttached []AttachedVolume `json:"volumesAttached,omitempty" protobuf:"bytes,10,rep,name=volumesAttached"`
+
+	// List of ExtendedResources that are allocatable on this node
+	// values are names of ExtendedResources
+	// +optional
+	ExtendedResourceAllocatable []string `json:"extendedResourceAllocatable,omitempty" protobuf:"bytes,11,rep,name=extendedResourceAllocatable"`
+	// List of all ExtendedResources on this node
+	// values are names of ExtendedResources
+	// +optional
+	ExtendedResourceCapacity []string `json:"extendedResourceCapacity,omitempty" protobuf:"bytes,12,rep,name=extendedResourceCapacity"`
+	// List of ExtendedResources that were on this node, but removed now
+	// values are names of ExtendedResources
+	// +optional
+	ExtendedResourceRemoved []string `json:"extendedResourceRemoved,omitempty" protobuf:"bytes,13,rep,name=extendedResourceRemoved"`
 }
 
 type UniqueVolumeName string

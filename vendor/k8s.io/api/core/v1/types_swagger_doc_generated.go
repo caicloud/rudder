@@ -121,7 +121,7 @@ var map_CSIPersistentVolumeSource = map[string]string{
 	"driver":                     "Driver is the name of the driver to use for this volume. Required.",
 	"volumeHandle":               "VolumeHandle is the unique volume name returned by the CSI volume plugin’s CreateVolume to refer to the volume on all subsequent calls. Required.",
 	"readOnly":                   "Optional: The value to pass to ControllerPublishVolumeRequest. Defaults to false (read/write).",
-	"fsType":                     "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+	"fsType":                     "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\".",
 	"volumeAttributes":           "Attributes of the volume to publish.",
 	"controllerPublishSecretRef": "ControllerPublishSecretRef is a reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls. This field is optional, and  may be empty if no secret is required. If the secret object contains more than one secret, all secrets are passed.",
 	"nodeStageSecretRef":         "NodeStageSecretRef is a reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls. This field is optional, and  may be empty if no secret is required. If the secret object contains more than one secret, all secrets are passed.",
@@ -306,6 +306,7 @@ var map_Container = map[string]string{
 	"stdin":                    "Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF. Default is false.",
 	"stdinOnce":                "Whether the container runtime should close the stdin channel after it has been opened by a single attach. When stdin is true the stdin stream will remain open across multiple attach sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the first client attaches to stdin, and then remains open and accepts data until the client disconnects, at which time stdin is closed and remains closed until the container is restarted. If this flag is false, a container processes that reads from stdin will never receive an EOF. Default is false",
 	"tty":                      "Whether this container should allocate a TTY for itself, also requires 'stdin' to be true. Default is false.",
+	"extendedResourceClaims":   "ExtendedResourceClaims is the claim names array users asked for this container",
 }
 
 func (Container) SwaggerDoc() map[string]string {
@@ -1083,17 +1084,20 @@ func (NodeSpec) SwaggerDoc() map[string]string {
 }
 
 var map_NodeStatus = map[string]string{
-	"":                "NodeStatus is information about the current status of a node.",
-	"capacity":        "Capacity represents the total resources of a node. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity",
-	"allocatable":     "Allocatable represents the resources of a node that are available for scheduling. Defaults to Capacity.",
-	"phase":           "NodePhase is the recently observed lifecycle phase of the node. More info: https://kubernetes.io/docs/concepts/nodes/node/#phase The field is never populated, and now is deprecated.",
-	"conditions":      "Conditions is an array of current observed node conditions. More info: https://kubernetes.io/docs/concepts/nodes/node/#condition",
-	"addresses":       "List of addresses reachable to the node. Queried from cloud provider, if available. More info: https://kubernetes.io/docs/concepts/nodes/node/#addresses",
-	"daemonEndpoints": "Endpoints of daemons running on the Node.",
-	"nodeInfo":        "Set of ids/uuids to uniquely identify the node. More info: https://kubernetes.io/docs/concepts/nodes/node/#info",
-	"images":          "List of container images on this node",
-	"volumesInUse":    "List of attachable volumes in use (mounted) by the node.",
-	"volumesAttached": "List of volumes that are attached to the node.",
+	"":                            "NodeStatus is information about the current status of a node.",
+	"capacity":                    "Capacity represents the total resources of a node. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity",
+	"allocatable":                 "Allocatable represents the resources of a node that are available for scheduling. Defaults to Capacity.",
+	"phase":                       "NodePhase is the recently observed lifecycle phase of the node. More info: https://kubernetes.io/docs/concepts/nodes/node/#phase The field is never populated, and now is deprecated.",
+	"conditions":                  "Conditions is an array of current observed node conditions. More info: https://kubernetes.io/docs/concepts/nodes/node/#condition",
+	"addresses":                   "List of addresses reachable to the node. Queried from cloud provider, if available. More info: https://kubernetes.io/docs/concepts/nodes/node/#addresses",
+	"daemonEndpoints":             "Endpoints of daemons running on the Node.",
+	"nodeInfo":                    "Set of ids/uuids to uniquely identify the node. More info: https://kubernetes.io/docs/concepts/nodes/node/#info",
+	"images":                      "List of container images on this node",
+	"volumesInUse":                "List of attachable volumes in use (mounted) by the node.",
+	"volumesAttached":             "List of volumes that are attached to the node.",
+	"extendedResourceAllocatable": "List of ExtendedResources that are allocatable on this node values are names of ExtendedResources",
+	"extendedResourceCapacity":    "List of all ExtendedResources on this node values are names of ExtendedResources",
+	"extendedResourceRemoved":     "List of ExtendedResources that were on this node, but removed now values are names of ExtendedResources",
 }
 
 func (NodeStatus) SwaggerDoc() map[string]string {
@@ -1631,7 +1635,7 @@ func (PreferredSchedulingTerm) SwaggerDoc() map[string]string {
 }
 
 var map_Probe = map[string]string{
-	"": "Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.",
+	"":                    "Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.",
 	"initialDelaySeconds": "Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes",
 	"timeoutSeconds":      "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes",
 	"periodSeconds":       "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
@@ -2177,7 +2181,7 @@ var map_VolumeMount = map[string]string{
 	"readOnly":         "Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.",
 	"mountPath":        "Path within the container at which the volume should be mounted.  Must not contain ':'.",
 	"subPath":          "Path within the volume from which the container's volume should be mounted. Defaults to \"\" (volume's root).",
-	"mountPropagation": "mountPropagation determines how mounts are propagated from the host to container and the other way around. When not set, MountPropagationHostToContainer is used. This field is beta in 1.10.",
+	"mountPropagation": "mountPropagation determines how mounts are propagated from the host to container and the other way around. When not set, MountPropagationNone is used. This field is beta in 1.10.",
 }
 
 func (VolumeMount) SwaggerDoc() map[string]string {
@@ -2216,23 +2220,23 @@ var map_VolumeSource = map[string]string{
 	"iscsi":                 "ISCSI represents an ISCSI Disk resource that is attached to a kubelet's host machine and then exposed to the pod. More info: https://releases.k8s.io/HEAD/examples/volumes/iscsi/README.md",
 	"glusterfs":             "Glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime. More info: https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md",
 	"persistentVolumeClaim": "PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims",
-	"rbd":                  "RBD represents a Rados Block Device mount on the host that shares a pod's lifetime. More info: https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md",
-	"flexVolume":           "FlexVolume represents a generic volume resource that is provisioned/attached using an exec based plugin.",
-	"cinder":               "Cinder represents a cinder volume attached and mounted on kubelets host machine More info: https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
-	"cephfs":               "CephFS represents a Ceph FS mount on the host that shares a pod's lifetime",
-	"flocker":              "Flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running",
-	"downwardAPI":          "DownwardAPI represents downward API about the pod that should populate this volume",
-	"fc":                   "FC represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.",
-	"azureFile":            "AzureFile represents an Azure File Service mount on the host and bind mount to the pod.",
-	"configMap":            "ConfigMap represents a configMap that should populate this volume",
-	"vsphereVolume":        "VsphereVolume represents a vSphere volume attached and mounted on kubelets host machine",
-	"quobyte":              "Quobyte represents a Quobyte mount on the host that shares a pod's lifetime",
-	"azureDisk":            "AzureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.",
-	"photonPersistentDisk": "PhotonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine",
-	"projected":            "Items for all in one resources secrets, configmaps, and downward API",
-	"portworxVolume":       "PortworxVolume represents a portworx volume attached and mounted on kubelets host machine",
-	"scaleIO":              "ScaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.",
-	"storageos":            "StorageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.",
+	"rbd":                   "RBD represents a Rados Block Device mount on the host that shares a pod's lifetime. More info: https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md",
+	"flexVolume":            "FlexVolume represents a generic volume resource that is provisioned/attached using an exec based plugin.",
+	"cinder":                "Cinder represents a cinder volume attached and mounted on kubelets host machine More info: https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
+	"cephfs":                "CephFS represents a Ceph FS mount on the host that shares a pod's lifetime",
+	"flocker":               "Flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running",
+	"downwardAPI":           "DownwardAPI represents downward API about the pod that should populate this volume",
+	"fc":                    "FC represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.",
+	"azureFile":             "AzureFile represents an Azure File Service mount on the host and bind mount to the pod.",
+	"configMap":             "ConfigMap represents a configMap that should populate this volume",
+	"vsphereVolume":         "VsphereVolume represents a vSphere volume attached and mounted on kubelets host machine",
+	"quobyte":               "Quobyte represents a Quobyte mount on the host that shares a pod's lifetime",
+	"azureDisk":             "AzureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.",
+	"photonPersistentDisk":  "PhotonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine",
+	"projected":             "Items for all in one resources secrets, configmaps, and downward API",
+	"portworxVolume":        "PortworxVolume represents a portworx volume attached and mounted on kubelets host machine",
+	"scaleIO":               "ScaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.",
+	"storageos":             "StorageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.",
 }
 
 func (VolumeSource) SwaggerDoc() map[string]string {
