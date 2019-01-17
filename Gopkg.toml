@@ -46,6 +46,10 @@
   name = "github.com/buger/jsonparser"
   branch = "master"
 
+[[override]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.12.3"
+
 [prune]
   go-tests = true
   unused-packages = true

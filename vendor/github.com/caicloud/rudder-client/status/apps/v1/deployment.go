@@ -8,7 +8,7 @@ import (
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	appslisters "k8s.io/client-go/listers/apps/v1"
@@ -31,46 +31,54 @@ func JudgeDeployment(factory listerfactory.ListerFactory, obj runtime.Object) (r
 }
 
 type deploymentLongRunning struct {
-	deployment *appsv1.Deployment
+	deployment     *appsv1.Deployment
+	updateRevision *appsv1.ReplicaSet
 }
 
 func newDeploymetLongRunning(deployment *appsv1.Deployment) LongRunning {
-	return &deploymentLongRunning{deployment}
+	return &deploymentLongRunning{
+		deployment: deployment,
+	}
 }
 
-func (d *deploymentLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, string, error) {
+func (d *deploymentLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
 	deployment := d.deployment
 
 	rsList, err := getReplicaSetsforDeployment(factory.Apps().V1().ReplicaSets(), deployment)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	rs := getUpdatedReplicaSetForDeployment(deployment, rsList)
-	if rs == nil {
-		return nil, "", ErrUpdatedRevisionNotExists
+	d.updateRevision = getUpdatedReplicaSetForDeployment(deployment, rsList)
+	if d.updateRevision == nil {
+		return nil, ErrUpdatedRevisionNotExists
 	}
 
 	// a replica set when one of its pods fails to be created
 	// due to insufficient quota, limit ranges, pod security policy, node selectors, etc. or deleted
 	// due to kubelet being down or finalizers are failing.
-	for _, c := range rs.Status.Conditions {
+	for _, c := range d.updateRevision.Status.Conditions {
 		if c.Type == appsv1.ReplicaSetReplicaFailure &&
 			c.Status == corev1.ConditionTrue {
 			return &releaseapi.ResourceStatus{
 				Phase:   releaseapi.ResourceFailed,
 				Reason:  c.Reason,
 				Message: c.Message,
-			}, string(rs.UID), nil
+			}, nil
 		}
 	}
-	return nil, string(rs.UID), nil
+
+	return nil, nil
 }
 
-func (d *deploymentLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
+func (d *deploymentLongRunning) IsUpdatedPod(pod *corev1.Pod) bool {
+	if d.updateRevision == nil {
+		return false
+	}
+
 	latest := false
 	for _, owner := range pod.OwnerReferences {
-		if string(owner.UID) == updatedRevisionKey {
+		if owner.UID == d.updateRevision.UID {
 			latest = true
 		}
 	}
@@ -130,19 +138,36 @@ func (o ReplicaSetsByCreationTimestamp) Less(i, j int) bool {
 }
 
 // getUpdatedReplicaSetForDeployment returns the updated RS this given deployment targets (the one with the same pod template).
+// In rare cases, such as after cluster upgrades, Deployment may end up with
+// having more than one new ReplicaSets that have the same template as its template,
+// see https://github.com/kubernetes/kubernetes/issues/40415
+// We deterministically choose the oldest and non-zero replicas ReplicaSet.
 func getUpdatedReplicaSetForDeployment(deployment *appsv1.Deployment, rsList []*appsv1.ReplicaSet) *appsv1.ReplicaSet {
 	sort.Sort(ReplicaSetsByCreationTimestamp(rsList))
+
+	candidates := make([]*appsv1.ReplicaSet, 0)
+
 	for i := range rsList {
 		if EqualIgnoreHash(&rsList[i].Spec.Template, &deployment.Spec.Template) {
-			// In rare cases, such as after cluster upgrades, Deployment may end up with
-			// having more than one new ReplicaSets that have the same template as its template,
-			// see https://github.com/kubernetes/kubernetes/issues/40415
-			// We deterministically choose the oldest new ReplicaSet.
-			return rsList[i]
+			candidates = append(candidates, rsList[i])
 		}
 	}
-	// new ReplicaSet does not exist.
-	return nil
+
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	firstCandidates := candidates[0]
+	for i := range candidates {
+		if candidates[i].Spec.Replicas != nil &&
+			*candidates[i].Spec.Replicas == 0 {
+			// ignore zero replicas to find the oldest and non-zero replicas ReplicaSet.
+			continue
+		}
+		return candidates[i]
+	}
+
+	return firstCandidates
 }
 
 // EqualIgnoreHash returns true if two given podTemplateSpec are equal, ignoring the diff in value of Labels[pod-template-hash]
@@ -156,5 +181,5 @@ func EqualIgnoreHash(template1, template2 *corev1.PodTemplateSpec) bool {
 	// Remove hash labels from template.Labels before comparing
 	delete(t1Copy.Labels, appsv1.DefaultDeploymentUniqueLabelKey)
 	delete(t2Copy.Labels, appsv1.DefaultDeploymentUniqueLabelKey)
-	return apiequality.Semantic.DeepEqual(t1Copy, t2Copy)
+	return equality.Semantic.DeepEqual(t1Copy, t2Copy)
 }
