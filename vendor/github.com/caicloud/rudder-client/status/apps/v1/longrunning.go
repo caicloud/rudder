@@ -54,27 +54,14 @@ func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error
 	predictEventsIssue := d.delegate.PredictEvents(d.events)
 
 	// predicts resource status from updated revision and get updated revision key
-	predictRevisionIssue, updatedRevisionKey, err := d.delegate.PredictUpdatedRevision(d.factory, d.events)
+	predictRevisionIssue, err := d.delegate.PredictUpdatedRevision(d.factory, d.events)
 	if err != nil && err != ErrUpdatedRevisionNotExists {
 		return releaseapi.ResourceStatusFrom(""), err
 	}
 
-	if err == ErrUpdatedRevisionNotExists && predictEventsIssue == nil {
-		// only if there is no predicted events error and no updated revison,
-		// then we can return immediately
-		if d.delegate.DesiredReplics() == 0 {
-			return releaseapi.ResourceStatusFrom(releaseapi.ResourceSuspended), nil
-		}
-		return releaseapi.ResourceStatus{
-			Phase:   releaseapi.ResourceProgressing,
-			Reason:  "NoUpdatedRevision",
-			Message: ErrUpdatedRevisionNotExists.Error(),
-		}, nil
-	}
-
 	// we should get pod statistics before returning predict revision status
 	// separate pods inte updated and old
-	updated, old, err := d.Pods(updatedRevisionKey)
+	updated, old, err := d.Pods()
 	if err != nil {
 		return releaseapi.ResourceStatusFrom(""), err
 	}
@@ -86,19 +73,24 @@ func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error
 		}
 	}()
 
-	if predictEventsIssue != nil {
-		return *predictEventsIssue, nil
-	}
-
-	if predictRevisionIssue != nil {
-		return *predictRevisionIssue, nil
-	}
-
 	// judge status from pods
-	return d.judge(d.delegate.DesiredReplics(), updated, old), nil
+	judgeFromPods := d.judge(d.delegate.DesiredReplics(), updated, old)
+
+	switch judgeFromPods.Phase {
+	case releaseapi.ResourceProgressing, releaseapi.ResourceUpdating:
+		if predictEventsIssue != nil {
+			return *predictEventsIssue, nil
+		}
+
+		if predictRevisionIssue != nil {
+			return *predictRevisionIssue, nil
+		}
+	}
+	return judgeFromPods, nil
+
 }
 
-func (d *longRunning) Pods(updatedRevisionKey string) (updated, old []HyperPod, err error) {
+func (d *longRunning) Pods() (updated, old []HyperPod, err error) {
 	// get pods
 	podList, err := getPodsFor(d.factory.Core().V1().Pods(), d.obj)
 	if err != nil {
@@ -108,7 +100,7 @@ func (d *longRunning) Pods(updatedRevisionKey string) (updated, old []HyperPod, 
 	for _, pod := range podList {
 		// judge pod status
 		status := podstatus.JudgePodStatus(pod, d.events)
-		if d.delegate.IsUpdatedPod(pod, updatedRevisionKey) {
+		if d.delegate.IsUpdatedPod(pod) {
 			updated = append(updated, HyperPod{pod, status})
 		} else {
 			old = append(old, HyperPod{pod, status})

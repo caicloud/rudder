@@ -177,7 +177,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5d7ab2baa010969736465e1cb3bb3680ebab364ba1a406f4fc0a08eed3b00aa1"
+  digest = "1:0c855a5bd9dbbe0714ac285b9859242b98d743694cbb219468c9f5b9728688c9"
   name = "github.com/caicloud/rudder-client"
   packages = [
     "status",
@@ -188,7 +188,7 @@
     "status/universal",
   ]
   pruneopts = "UT"
-  revision = "9bc17c25dc3f839f580a781c9e748e4c4fc85592"
+  revision = "6114302b3444c408b628ad6a82cf8d08747cf17b"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -469,7 +469,7 @@
   version = "v2.2.1"
 
 [[projects]]
-  digest = "1:cae8f1d1d786aa486a7ed236a8c1f099b3b44697ec6bbb5951d7e9bdb53a5125"
+  digest = "1:a16c2c5ebeb34d296b222e470e43a70ed9a20ce9b2e1a9234f1b4b97ccb11515"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1alpha1",
@@ -502,8 +502,8 @@
     "storage/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "73d903622b7391f3312dcbac6483fed484e185f8"
-  version = "kubernetes-1.10.0"
+  revision = "b503174bad5991eb66f18247f52e41c3258f6348"
+  version = "kubernetes-1.12.3"
 
 [[projects]]
   digest = "1:466b8618a6cb82e0c5fa535255ed55d89ba6e203bec42dd15400bf1311f3cb37"

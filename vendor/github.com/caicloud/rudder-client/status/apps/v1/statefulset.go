@@ -35,24 +35,33 @@ func JudgeStatefulSet(factory listerfactory.ListerFactory, obj runtime.Object) (
 }
 
 type statefulsetLongRunning struct {
-	statefulset *appsv1.StatefulSet
+	statefulset     *appsv1.StatefulSet
+	updatedRevision string
 }
 
 func newStatefulSetLongRunning(statefulset *appsv1.StatefulSet) LongRunning {
-	return &statefulsetLongRunning{statefulset}
-}
-
-func (d *statefulsetLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, string, error) {
-	statefulset := d.statefulset
-	updatedRevision := statefulset.Status.UpdateRevision
-	if updatedRevision == "" {
-		return nil, "", ErrUpdatedRevisionNotExists
+	return &statefulsetLongRunning{
+		statefulset:     statefulset,
+		updatedRevision: "",
 	}
-	return nil, updatedRevision, nil
 }
 
-func (d *statefulsetLongRunning) IsUpdatedPod(pod *corev1.Pod, updatedRevisionKey string) bool {
-	return getLabel(pod, appsv1.StatefulSetRevisionLabel) == updatedRevisionKey
+func (d *statefulsetLongRunning) PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (*releaseapi.ResourceStatus, error) {
+	statefulset := d.statefulset
+	d.updatedRevision = statefulset.Status.UpdateRevision
+	if d.updatedRevision == "" {
+		return nil, ErrUpdatedRevisionNotExists
+	}
+
+	return nil, nil
+}
+
+func (d *statefulsetLongRunning) IsUpdatedPod(pod *corev1.Pod) bool {
+	if d.updatedRevision == "" {
+		return false
+	}
+
+	return getLabel(pod, appsv1.StatefulSetRevisionLabel) == d.updatedRevision
 }
 
 func (d *statefulsetLongRunning) PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus {
