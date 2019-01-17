@@ -19,9 +19,10 @@ type LongRunning interface {
 	// PredictRevision predicts longRunning resourceStatus from events
 	PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus
 	// UpdatedRevision returns the updated revision and key
-	PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (resourceStatus *releaseapi.ResourceStatus, updatedRevisionKey string, err error)
+	PredictUpdatedRevision(factory listerfactory.ListerFactory, events []*corev1.Event) (resourceStatus *releaseapi.ResourceStatus, err error)
 	// IsUpdatedPod checks if the pod is updated
-	IsUpdatedPod(pod *corev1.Pod, updateRevisionKey string) bool
+	// You must call PredictUpdatedRevision before using IsUpdatedPod
+	IsUpdatedPod(pod *corev1.Pod) bool
 	// DesiredReplics returns the desired replicas of this resource
 	DesiredReplics() int32
 }
