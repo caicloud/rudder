@@ -8,7 +8,6 @@ import (
 	listerrelease "github.com/caicloud/clientset/listers/release/v1alpha1"
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/release"
-	"github.com/caicloud/rudder/pkg/render"
 	"github.com/caicloud/rudder/pkg/storage"
 	"github.com/caicloud/rudder/pkg/store"
 	"github.com/golang/glog"
@@ -41,7 +40,7 @@ func NewReleaseController(
 	if err != nil {
 		return nil, err
 	}
-	handler := release.NewReleaseHandler(render.NewRender(), client, ignored)
+	handler := release.NewReleaseHandler(client, ignored)
 	backend := storage.NewReleaseBackendWithCacheLayer(releaseClient, store)
 	rc := &ReleaseController{
 		queue:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),

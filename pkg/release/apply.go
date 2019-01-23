@@ -95,8 +95,8 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 
 		// check the manifests
 
-		// Render
-		carrier, err := rc.render.Render(&render.RenderOptions{
+		// FIX: use temporary render to avoid concurrent issue
+		carrier, err := render.NewRender().Render(&render.RenderOptions{
 			Namespace: release.Namespace,
 			Release:   release.Name,
 			Version:   release.Status.Version,
