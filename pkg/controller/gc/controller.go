@@ -60,6 +60,20 @@ func newReleaseResources(ignored []schema.GroupVersionKind) *releaseResources {
 	return r
 }
 
+func (r *releaseResources) duplicateReleases() []*releaseapi.Release {
+	fakeReleases := make([]*releaseapi.Release, 0, len(r.releases))
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	for _, r := range r.releases {
+		rel := &releaseapi.Release{}
+		rel.Namespace = r.namespace
+		rel.Name = r.name
+		rel.UID = r.uid
+		fakeReleases = append(fakeReleases, rel)
+	}
+	return fakeReleases
+}
+
 func (r *releaseResources) resources(release *releaseapi.Release) []*resource {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
@@ -273,14 +287,7 @@ func (gc *GarbageCollector) Run(workers int32, stopCh <-chan struct{}) {
 // resync syncs all releases if there is nothing in queue.
 func (gc *GarbageCollector) resync() {
 	for {
-		fakeReleases := make([]*releaseapi.Release, 0, len(gc.resources.releases))
-		for _, r := range gc.resources.releases {
-			rel := &releaseapi.Release{}
-			rel.Namespace = r.namespace
-			rel.Name = r.name
-			rel.UID = r.uid
-			fakeReleases = append(fakeReleases, rel)
-		}
+		fakeReleases := gc.resources.duplicateReleases()
 		synced := 0
 		for {
 			resyncCount := gc.workers - gc.working
