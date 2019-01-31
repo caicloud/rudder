@@ -40,8 +40,6 @@ var (
 		"requests.cpu",
 		"requests.memory",
 		"requests.nvidia.com/gpu",
-		// Deprecated
-		"alpha.kubernetes.io/nvidia-gpu",
 	}
 )
 

@@ -21,11 +21,13 @@ const (
 )
 
 const (
-	ReplicaTypeMaster ReplicaType = "master"
-	ReplicaTypeWorker ReplicaType = "worker"
-	ReplicaTypeEval   ReplicaType = "eval"
-	ReplicaTypePS     ReplicaType = "ps"
-	ReplicaTypeChief  ReplicaType = "chief"
+	ReplicaTypeMaster   ReplicaType = "master"
+	ReplicaTypeWorker   ReplicaType = "worker"
+	ReplicaTypeEval     ReplicaType = "eval"
+	ReplicaTypePS       ReplicaType = "ps"
+	ReplicaTypeChief    ReplicaType = "chief"
+	ReplicaTypeDriver   ReplicaType = "driver"
+	ReplicaTypeExecutor ReplicaType = "executor"
 )
 
 const (
@@ -45,6 +47,7 @@ const (
 	TFserving   FrameworkType = "tfserving"
 	OnnxServing FrameworkType = "onnxserving"
 	ServingType FrameworkType = "serving"
+	Spark       FrameworkType = "spark"
 )
 
 const (
@@ -77,8 +80,9 @@ const (
 )
 
 const (
-	TrainingTemplate TemplateType = "training"
-	GeneralTemplate  TemplateType = "general"
+	TrainingTemplate    TemplateType = "training"
+	GeneralTemplate     TemplateType = "general"
+	DataProcessTemplate TemplateType = "dataprocess"
 )
 
 // +genclient
@@ -197,6 +201,8 @@ type TemplateSource struct {
 	Serving *Serving `json:"serving,omitempty"`
 	// General defines a general task specification.
 	General *General `json:"general,omitempty"`
+	// DataProcess defines a dataprocess task specification.
+	DataProcess *DataProcess `json:"dataprocess,omitempty"`
 }
 
 type Properties struct {
@@ -257,6 +263,58 @@ type General struct {
 	Env []corev1.EnvVar `json:"env"`
 	// Dependence files
 	Dependency Dependency `json:"dependency"`
+}
+
+type DataProcess struct {
+	// Inputs dataset for a dateprocess stage.
+	Inputs []Dataset `json:"inputs"`
+	// Outputs dataset for a dateprocess stage.
+	Outputs []Dataset `json:"outputs"`
+	// Type tells the type of the Spark application.
+	Type string `json:"type"`
+	// Mode is the deployment mode of the Spark application.
+	Mode string `json:"mode,omitempty"`
+	// Image is the container image for the driver, executor, and init-container. Any custom container images for the
+	// driver, executor, or init-container takes precedence over this.
+	// Optional.
+	Image ImageFlavor `json:"image,omitempty"`
+	// MainClass is the fully-qualified main class of the Spark application.
+	// This only applies to Java/Scala Spark applications.
+	// Optional.
+	MainClass string `json:"mainClass,omitempty"`
+	// MainApplicationFile is the path to a bundled JAR, Python, or R file of the application.
+	// Optional.
+	MainApplicationFile string `json:"mainApplicationFile"`
+	// Replica used in dateprocess stage.
+	Replicas []Replica `json:"replicas"`
+	// Deps captures all possible types of dependencies of a Spark application.
+	Deps Dependencies `json:"deps"`
+	// This sets the major Python version of the docker
+	// image used to run the driver and executor containers. Can either be 2 or 3, default 2.
+	// Optional.
+	PythonVersion string `json:"pythonVersion,omitempty"`
+	// Pod's env
+	Env []corev1.EnvVar `json:"env"`
+	// Arguments is a list of arguments to be passed to the application.
+	// Optional.
+	Arguments []string `json:"arguments,omitempty"`
+	// SparkConf carries user-specified Spark configuration properties as they would use the  "--conf" option in
+	// spark-submit.
+	// Optional.
+	SparkConf map[string]string `json:"sparkConf,omitempty"`
+}
+
+// Dependencies specifies all possible types of dependencies of a Spark application.
+type Dependencies struct {
+	// Jars is a list of JAR files the Spark application depends on.
+	// Optional.
+	Jars []string `json:"jars,omitempty"`
+	// Files is a list of files the Spark application depends on.
+	// Optional.
+	Files []string `json:"files,omitempty"`
+	// PyFiles is a list of Python files the Spark application depends on.
+	// Optional.
+	PyFiles []string `json:"pyFiles,omitempty"`
 }
 
 type ModelInfo struct {

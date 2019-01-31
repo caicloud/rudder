@@ -47,13 +47,14 @@ type ClusterSpec struct {
 }
 
 type ClusterStatus struct {
-	Phase         ClusterPhase                       `json:"phase"`
-	Conditions    []ClusterCondition                 `json:"conditions"`
-	Masters       []MachineThumbnail                 `json:"masters"`
-	Nodes         []MachineThumbnail                 `json:"nodes"`
-	Capacity      map[ResourceName]resource.Quantity `json:"capacity"`
-	OperationLogs []OperationLog                     `json:"operationLogs,omitempty"`
-	AutoScaling   ClusterAutoScalingStatus           `json:"autoScaling,omitempty"`
+	Phase          ClusterPhase                       `json:"phase"`
+	Conditions     []ClusterCondition                 `json:"conditions"`
+	Masters        []MachineThumbnail                 `json:"masters"`
+	Nodes          []MachineThumbnail                 `json:"nodes"`
+	Capacity       map[ResourceName]resource.Quantity `json:"capacity"`
+	OperationLogs  []OperationLog                     `json:"operationLogs,omitempty"`
+	AutoScaling    ClusterAutoScalingStatus           `json:"autoScaling,omitempty"`
+	ProviderStatus ClusterProviderStatus              `json:"providerStatus,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -189,7 +190,8 @@ type ClusterCloudProviderConfig struct {
 	// maybe nil in old or control cluster, need to be inited with a default setting by controller
 	AutoScalingSetting *ClusterAutoScalingSetting `json:"autoScalingSetting,omitempty"`
 
-	Azure *AzureClusterCloudProviderConfig `json:"azure,omitempty"`
+	Azure    *AzureClusterCloudProviderConfig    `json:"azure,omitempty"`
+	AzureAks *AzureAksClusterCloudProviderConfig `json:"azureAks,omitempty"`
 }
 
 // azure
@@ -214,6 +216,82 @@ type AzureClusterCloudProviderConfig struct {
 	VirtualNetwork AzureVirtualNetwork `json:"virtualNetwork"`
 	// LoadBalancer - ha cluster vip is azure lb
 	LoadBalancer *AzureLoadBalancer `json:"loadBalancer,omitempty"`
+}
+
+// AzureAksClusterCloudProviderConfig for azure aks cluster config
+type AzureAksClusterCloudProviderConfig struct {
+	// VirtualNetwork - aks virtual network
+	VirtualNetwork AzureVirtualNetwork `json:"virtualNetwork"`
+	// Subnet - ask node subnet
+	Subnet AzureSubnet `json:"subnet"`
+	// Owner - the owner name, used for hosting aks deleting
+	Owner string `json:"owner,omitempty"`
+	// Aks - the aks cluster config
+	Aks AzureManagedCluster `json:"aks"`
+}
+
+// AzureManagedCluster is azure aks properties
+type AzureManagedCluster struct {
+	AzureObjectMeta
+	KubernetesVersion string `json:"kubernetesVersion"`
+	DNSPrefix         string `json:"dnsPrefix"`
+	// Fqdn is the api server url, it will return by the azure
+	Fqdn string `json:"fqdn"`
+	// the agent pool profiles, only one pool is required for now
+	AgentPoolProfiles []AzureManagedClusterAgentPoolProfile `json:"agentPoolProfiles"`
+	LinuxProfile      AzureLinuxProfile                     `json:"linuxProfile"`
+	// the azure secret, is required
+	ServicePrincipalProfile AzureManagedClusterServicePrincipalProfile `json:"servicePrincipalProfile"`
+	// the resource group witch hold the all the agent, it will return by the azure, and can't be configed
+	NodeResourceGroup string                            `json:"nodeResourceGroup"`
+	EnableRBAC        bool                              `json:"enableRBAC"`
+	NetworkProfile    AzureManagedClusterNetworkProfile `json:"networkProfile"`
+}
+
+// AzureManagedClusterAgentPoolProfile for azure aks agent pool properties
+type AzureManagedClusterAgentPoolProfile struct {
+	Name         string      `json:"name"`
+	Count        int32       `json:"count"`
+	VMSize       AzureVMSize `json:"vmSize"`
+	OSDisk       AzureDisk   `json:"osDisk"`
+	VnetSubnetID string      `json:"vnetSubnetID,omitempty`
+	MaxPods      int32       `json:"maxPods"`
+	// OSType for the agent os, only linux is available
+	OSType string `json:"osType"`
+}
+
+// AzureLinuxProfile for azure aks agent linux profile
+type AzureLinuxProfile struct {
+	AdminUsername string                `json:"adminUsername"`
+	SSH           AzureSSHConfiguration `json:"ssh"`
+}
+
+// AzureSSHConfiguration for azure ssh config
+type AzureSSHConfiguration struct {
+	// only one key is required for now
+	PublicKeys []AzurePublicKey `json:"publicKeys"`
+}
+
+// AzurePublicKey for azure ssh key
+type AzurePublicKey struct {
+	KeyData string `json:"keyData"`
+}
+
+// AzureManagedClusterServicePrincipalProfile for azure aks service account profile
+type AzureManagedClusterServicePrincipalProfile struct {
+	ClientID string `json:"clientID,omitempty"`
+	Secret   string `json:"secret,omitempty"`
+}
+
+// AzureManagedClusterNetworkProfile for azure aks cluster network profile
+type AzureManagedClusterNetworkProfile struct {
+	NetworkPlugin string `json:"networkPlugin"`
+	// doesn't support for now
+	NetworkPolicy    string `json:"networkPolicy"`
+	PodCIDR          string `json:"podCIDR"`
+	ServiceCIDR      string `json:"serviceCIDR"`
+	DNSServiceIP     string `json:"dnsServiceIP"`
+	DockerBridgeCIDR string `json:"dockerBridgeCIDR"`
 }
 
 type AzureMachineCloudProviderConfig struct {
@@ -547,6 +625,7 @@ type MachineDiskInfo struct {
 	Device     string `json:"device"`
 	Capacity   uint64 `json:"capacity"`
 	Type       string `json:"type"`
+	DeviceType string `json:"deviceType"`
 	MountPoint string `json:"mountPoint"`
 }
 
@@ -597,8 +676,9 @@ type ClusterScaleDownSetting struct {
 type AutoScalingNotifySetting struct {
 	// notify methods
 	Methods []string `json:"methods"`
-	// notify user ids
-	Users []string `json:"users"`
+	// notify group ids
+	// is int in notify-admin, but in case of it changes, use string
+	Groups []string `json:"groups"`
 }
 
 // ClusterAutoScalingSetting describe a cluster auto scaling setting
@@ -622,6 +702,19 @@ type ClusterAutoScalingStatus struct {
 	LastScaleDownTime metav1.Time `json:"lastScaleDownTime,omitempty"`
 	// last selected scale down group name
 	LastScaleDownGroup string `json:"lastScaleDownGroup,omitempty"`
+}
+
+// ClusterProviderStatus describe cluster cloud provider operate status
+type ClusterProviderStatus struct {
+	AzureAks *AzureAksClusterCloudProviderStatus `json:"azureAks,omitempty"`
+}
+
+// AzureAksClusterCloudProviderStatus for azure aks status
+type AzureAksClusterCloudProviderStatus struct {
+	// the aks state get from azure
+	ProvisioningState string `json:"provisioningState,omitempty"`
+	// AgentPoolCount - the agent count, use one value because there is just one pool available for now
+	AgentPoolCount int32 `json:"agentPoolCount"`
 }
 
 // +genclient
