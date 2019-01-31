@@ -48,6 +48,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SnapshotList{},
 		&RequirementGap{},
 		&RequirementGapList{},
+		&NodeLocalStorage{},
+		&NodeLocalStorageList{},
 	)
 
 	// Add common types

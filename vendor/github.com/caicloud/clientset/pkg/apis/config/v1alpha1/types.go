@@ -88,6 +88,12 @@ type Reference struct {
 
 // ExtraInfo describes the extra infomation of config reference.
 type ExtraInfo struct {
+	ReleaseExtraInfo `json:",inline"`
+	IngressExtraInfo `json:",inline"`
+}
+
+// ExtraInfo describes the release extra infomation of config reference.
+type ReleaseExtraInfo struct {
 	Alias        string        `json:"alias,omitempty"`
 	ReleaseKind  string        `json:"releaseKind,omitempty"`
 	ControlledBy *ControlledBy `json:"controlledBy,omitempty"`
@@ -98,6 +104,11 @@ type ControlledBy struct {
 	Kind  string `json:"kind"`
 	Name  string `json:"name"`
 	Alias string `json:"alias"`
+}
+
+// IngressExtraInfo describes the ingress extra infomation of config reference.
+type IngressExtraInfo struct {
+	LoadBalancer string `json:"loadBalancer,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
