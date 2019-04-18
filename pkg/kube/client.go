@@ -258,7 +258,7 @@ func jobEqual(desired, current *batchv1.Job) (bool, error) {
 	// apply desired spec to dest
 	err := mergo.Merge(destSpec, desired.Spec, mergo.WithOverride)
 	if err != nil {
-		glog.V(5).Infof("merge job spec error: %v", err)
+		glog.Errorf("merge job spec error: %v", err)
 		return false, err
 	}
 
