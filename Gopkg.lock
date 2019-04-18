@@ -203,6 +203,17 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:4ddc17aeaa82cb18c5f0a25d7c253a10682f518f4b2558a82869506eec223d76"
+  name = "github.com/docker/distribution"
+  packages = [
+    "digestset",
+    "reference",
+  ]
+  pruneopts = "UT"
+  revision = "2461543d988979529609e8cb6fca9ca190dc48da"
+  version = "v2.7.1"
+
+[[projects]]
   branch = "master"
   digest = "1:3a18359b3a795023ac6943579293f2e2440cf2d9b340f3d0e04613b93ee16aa6"
   name = "github.com/evanphx/json-patch"
@@ -380,6 +391,14 @@
   pruneopts = "UT"
   revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
   version = "1.0.0"
+
+[[projects]]
+  digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
+  name = "github.com/opencontainers/go-digest"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
+  version = "v1.0.0-rc1"
 
 [[projects]]
   branch = "master"
@@ -563,6 +582,14 @@
   version = "kubernetes-1.12.3"
 
 [[projects]]
+  digest = "1:fa432f3acd7631bca4888e8d0f1db60cc46aef6a2d85a7f87f0ade54ea0ba56e"
+  name = "k8s.io/apiextensions-apiserver"
+  packages = ["pkg/features"]
+  pruneopts = "UT"
+  revision = "0cd23ebeb6882bd1cdc2cb15fc7b2d72e8a86a5b"
+  version = "kubernetes-1.12.3"
+
+[[projects]]
   digest = "1:6355cb12952d156de34f8603e4e7f02518a8aa57e08cccc8044bb2999e3d1dca"
   name = "k8s.io/apimachinery"
   packages = [
@@ -612,6 +639,17 @@
   ]
   pruneopts = "UT"
   revision = "eddba98df674a16931d2d4ba75edc3a389bf633a"
+  version = "kubernetes-1.12.3"
+
+[[projects]]
+  digest = "1:5000d702c1ddfdbe76ea69a960a9488729063110ea848ddd2bff7a31dfd75672"
+  name = "k8s.io/apiserver"
+  packages = [
+    "pkg/features",
+    "pkg/util/feature",
+  ]
+  pruneopts = "UT"
+  revision = "92fdef3a232a23afb9644f6151119b5961b9feab"
   version = "kubernetes-1.12.3"
 
 [[projects]]
@@ -780,6 +818,86 @@
   pruneopts = "UT"
   revision = "0f2f0396e266ad24afbd02375ba74c0dda1e3611"
 
+[[projects]]
+  digest = "1:27f09a34d91247fe7406ddd5cada13745f22013b8e2932c384fdf8034e4436d2"
+  name = "k8s.io/kubernetes"
+  packages = [
+    "pkg/api/legacyscheme",
+    "pkg/api/pod",
+    "pkg/apis/apps",
+    "pkg/apis/apps/install",
+    "pkg/apis/apps/v1",
+    "pkg/apis/apps/v1beta1",
+    "pkg/apis/apps/v1beta2",
+    "pkg/apis/authentication",
+    "pkg/apis/authentication/install",
+    "pkg/apis/authentication/v1",
+    "pkg/apis/authentication/v1beta1",
+    "pkg/apis/authorization",
+    "pkg/apis/authorization/install",
+    "pkg/apis/authorization/v1",
+    "pkg/apis/authorization/v1beta1",
+    "pkg/apis/autoscaling",
+    "pkg/apis/autoscaling/install",
+    "pkg/apis/autoscaling/v1",
+    "pkg/apis/autoscaling/v2beta1",
+    "pkg/apis/autoscaling/v2beta2",
+    "pkg/apis/batch",
+    "pkg/apis/batch/install",
+    "pkg/apis/batch/v1",
+    "pkg/apis/batch/v1beta1",
+    "pkg/apis/batch/v2alpha1",
+    "pkg/apis/certificates",
+    "pkg/apis/certificates/install",
+    "pkg/apis/certificates/v1beta1",
+    "pkg/apis/coordination",
+    "pkg/apis/coordination/install",
+    "pkg/apis/coordination/v1beta1",
+    "pkg/apis/core",
+    "pkg/apis/core/install",
+    "pkg/apis/core/v1",
+    "pkg/apis/events",
+    "pkg/apis/events/install",
+    "pkg/apis/events/v1beta1",
+    "pkg/apis/extensions",
+    "pkg/apis/extensions/install",
+    "pkg/apis/extensions/v1beta1",
+    "pkg/apis/networking",
+    "pkg/apis/policy",
+    "pkg/apis/policy/install",
+    "pkg/apis/policy/v1beta1",
+    "pkg/apis/rbac",
+    "pkg/apis/rbac/install",
+    "pkg/apis/rbac/v1",
+    "pkg/apis/rbac/v1alpha1",
+    "pkg/apis/rbac/v1beta1",
+    "pkg/apis/scheduling",
+    "pkg/apis/scheduling/install",
+    "pkg/apis/scheduling/v1alpha1",
+    "pkg/apis/scheduling/v1beta1",
+    "pkg/apis/settings",
+    "pkg/apis/settings/install",
+    "pkg/apis/settings/v1alpha1",
+    "pkg/apis/storage",
+    "pkg/apis/storage/install",
+    "pkg/apis/storage/v1",
+    "pkg/apis/storage/v1alpha1",
+    "pkg/apis/storage/v1beta1",
+    "pkg/features",
+    "pkg/util/parsers",
+  ]
+  pruneopts = "UT"
+  revision = "435f92c719f279a3a67808c80521ea17d5715c66"
+  version = "v1.12.3"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f8ae6e0da72b154967c7e6b7566486fc0337ac0d5d0362db67f9c31323a03c28"
+  name = "k8s.io/utils"
+  packages = ["pointer"]
+  pruneopts = "UT"
+  revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -800,6 +918,7 @@
     "github.com/evanphx/json-patch",
     "github.com/ghodss/yaml",
     "github.com/golang/glog",
+    "github.com/imdario/mergo",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "k8s.io/api/apps/v1",
@@ -831,6 +950,25 @@
     "k8s.io/helm/pkg/proto/hapi/chart",
     "k8s.io/helm/pkg/releaseutil",
     "k8s.io/helm/pkg/timeconv",
+    "k8s.io/kubernetes/pkg/api/legacyscheme",
+    "k8s.io/kubernetes/pkg/api/pod",
+    "k8s.io/kubernetes/pkg/apis/apps/install",
+    "k8s.io/kubernetes/pkg/apis/authentication/install",
+    "k8s.io/kubernetes/pkg/apis/authorization/install",
+    "k8s.io/kubernetes/pkg/apis/autoscaling/install",
+    "k8s.io/kubernetes/pkg/apis/batch/install",
+    "k8s.io/kubernetes/pkg/apis/batch/v1",
+    "k8s.io/kubernetes/pkg/apis/certificates/install",
+    "k8s.io/kubernetes/pkg/apis/coordination/install",
+    "k8s.io/kubernetes/pkg/apis/core",
+    "k8s.io/kubernetes/pkg/apis/core/install",
+    "k8s.io/kubernetes/pkg/apis/events/install",
+    "k8s.io/kubernetes/pkg/apis/extensions/install",
+    "k8s.io/kubernetes/pkg/apis/policy/install",
+    "k8s.io/kubernetes/pkg/apis/rbac/install",
+    "k8s.io/kubernetes/pkg/apis/scheduling/install",
+    "k8s.io/kubernetes/pkg/apis/settings/install",
+    "k8s.io/kubernetes/pkg/apis/storage/install",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -3,9 +3,12 @@ package kube
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/caicloud/rudder/pkg/kube/apply"
 	"github.com/golang/glog"
+	"github.com/imdario/mergo"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,6 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	k8spodutil "k8s.io/kubernetes/pkg/api/pod"
+	k8sbatchv1 "k8s.io/kubernetes/pkg/apis/batch/v1"
+	k8score "k8s.io/kubernetes/pkg/apis/core"
 )
 
 // CacheLayers Contains layers for all kinds.
@@ -165,34 +172,11 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 				(options.Checker != nil && options.Checker(obj)) {
 				// Job Cannot be update, so we must re-create Job
 				if gvk.Kind == "Job" {
-					deletePolicy := metav1.DeletePropagationBackground
-					err := client.Delete(accessor.GetName(), &metav1.DeleteOptions{
-						PropagationPolicy: &deletePolicy,
-					})
-					if err != nil && !errors.IsNotFound(err) {
-						return err
-					}
-					if c.layers != nil {
-						// Record the result into cache.
-						layer, err := c.layers.LayerFor(gvk)
-						if err != nil {
-							return err
-						}
-						layer.Deleted(obj)
-					}
-					result, err := client.Create(obj)
+					err := c.applyJob(client, gvk, obj, existence)
 					if err != nil {
 						return err
 					}
-					if c.layers != nil {
-						// Record the result into cache.
-						layer, err := c.layers.LayerFor(gvk)
-						if err != nil {
-							return err
-						}
-						layer.Created(result)
-						continue
-					}
+					continue
 				}
 				if err := apply.Apply(gvk, existence, obj); err != nil {
 					return err
@@ -219,6 +203,89 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 		}
 	}
 	return nil
+}
+
+func (c *client) applyJob(client *ResourceClient, gvk schema.GroupVersionKind, obj, existence runtime.Object) error {
+	desiredJob := obj.(*batchv1.Job)
+	currentJob := existence.(*batchv1.Job)
+
+	equal, err := jobEqual(desiredJob, currentJob)
+	if err != nil {
+		return err
+	}
+	if equal {
+		return nil
+	}
+
+	// Job Cannot be update, so we must re-create Job
+	deletePolicy := metav1.DeletePropagationBackground
+	err = client.Delete(desiredJob.Name, &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	if c.layers != nil {
+		// Record the result into cache.
+		layer, err := c.layers.LayerFor(gvk)
+		if err != nil {
+			return err
+		}
+		layer.Deleted(obj)
+	}
+	result, err := client.Create(obj)
+	if err != nil {
+		return err
+	}
+	if c.layers != nil {
+		// Record the result into cache.
+		layer, err := c.layers.LayerFor(gvk)
+		if err != nil {
+			return err
+		}
+		layer.Created(result)
+	}
+	return nil
+}
+
+func jobEqual(desired, current *batchv1.Job) (bool, error) {
+
+	setDefaultJob(desired)
+
+	currentSpec := current.Spec
+	destSpec := currentSpec.DeepCopy()
+
+	// apply desired spec to dest
+	err := mergo.Merge(destSpec, desired.Spec, mergo.WithOverride)
+	if err != nil {
+		glog.Errorf("merge job spec error: %v", err)
+		return false, err
+	}
+
+	currentSpecBytes, _ := json.Marshal(currentSpec)
+	destSpecBytes, _ := json.Marshal(destSpec)
+
+	if !reflect.DeepEqual(currentSpecBytes, destSpecBytes) {
+		// something changed in spec
+		glog.V(5).Infof("job spec changed, in cluster is %v, desired is %v", string(currentSpecBytes), string(destSpecBytes))
+		return false, err
+	}
+	return true, nil
+
+}
+
+// TODO: the feature in utilfeature.DefaultFeatureGate must be the same as apiserver
+func setDefaultJob(job *batchv1.Job) {
+	// set default in job spec and pod template
+	k8sbatchv1.SetObjectDefaults_Job(job)
+
+	in := job.Spec.Template.Spec
+	out := k8score.PodSpec{}
+
+	legacyscheme.Scheme.Convert(&in, &out, nil)
+	// drop disabled alpha fields in podSpec
+	k8spodutil.DropDisabledAlphaFields(&out)
+	legacyscheme.Scheme.Convert(&out, &job.Spec.Template.Spec, nil)
 }
 
 // Create creates all these resources.
