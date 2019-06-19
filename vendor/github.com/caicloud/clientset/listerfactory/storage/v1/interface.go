@@ -16,6 +16,8 @@ import (
 // Interface provides access to all the listers in this group version.
 type Interface interface { // StorageClasses returns a StorageClassLister
 	StorageClasses() v1.StorageClassLister
+	// VolumeAttachments returns a VolumeAttachmentLister
+	VolumeAttachments() v1.VolumeAttachmentLister
 }
 
 type version struct {
@@ -45,4 +47,14 @@ func (v *version) StorageClasses() v1.StorageClassLister {
 // StorageClasses returns a StorageClassLister.
 func (v *infromerVersion) StorageClasses() v1.StorageClassLister {
 	return v.factory.Storage().V1().StorageClasses().Lister()
+}
+
+// VolumeAttachments returns a VolumeAttachmentLister.
+func (v *version) VolumeAttachments() v1.VolumeAttachmentLister {
+	return &volumeAttachmentLister{client: v.client, tweakListOptions: v.tweakListOptions}
+}
+
+// VolumeAttachments returns a VolumeAttachmentLister.
+func (v *infromerVersion) VolumeAttachments() v1.VolumeAttachmentLister {
+	return v.factory.Storage().V1().VolumeAttachments().Lister()
 }

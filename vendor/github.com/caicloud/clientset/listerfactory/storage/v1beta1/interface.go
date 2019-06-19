@@ -14,7 +14,11 @@ import (
 )
 
 // Interface provides access to all the listers in this group version.
-type Interface interface { // StorageClasses returns a StorageClassLister
+type Interface interface { // CSIDrivers returns a CSIDriverLister
+	CSIDrivers() v1beta1.CSIDriverLister
+	// CSINodes returns a CSINodeLister
+	CSINodes() v1beta1.CSINodeLister
+	// StorageClasses returns a StorageClassLister
 	StorageClasses() v1beta1.StorageClassLister
 	// VolumeAttachments returns a VolumeAttachmentLister
 	VolumeAttachments() v1beta1.VolumeAttachmentLister
@@ -37,6 +41,26 @@ func New(client kubernetes.Interface, tweakListOptions internalinterfaces.TweakL
 // NewFrom returns a new Interface.
 func NewFrom(factory informers.SharedInformerFactory) Interface {
 	return &infromerVersion{factory: factory}
+}
+
+// CSIDrivers returns a CSIDriverLister.
+func (v *version) CSIDrivers() v1beta1.CSIDriverLister {
+	return &cSIDriverLister{client: v.client, tweakListOptions: v.tweakListOptions}
+}
+
+// CSIDrivers returns a CSIDriverLister.
+func (v *infromerVersion) CSIDrivers() v1beta1.CSIDriverLister {
+	return v.factory.Storage().V1beta1().CSIDrivers().Lister()
+}
+
+// CSINodes returns a CSINodeLister.
+func (v *version) CSINodes() v1beta1.CSINodeLister {
+	return &cSINodeLister{client: v.client, tweakListOptions: v.tweakListOptions}
+}
+
+// CSINodes returns a CSINodeLister.
+func (v *infromerVersion) CSINodes() v1beta1.CSINodeLister {
+	return v.factory.Storage().V1beta1().CSINodes().Lister()
 }
 
 // StorageClasses returns a StorageClassLister.

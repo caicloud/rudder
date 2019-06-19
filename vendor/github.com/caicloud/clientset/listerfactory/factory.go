@@ -9,6 +9,7 @@ package listerfactory
 import (
 	admissionregistration "github.com/caicloud/clientset/listerfactory/admissionregistration"
 	apps "github.com/caicloud/clientset/listerfactory/apps"
+	auditregistration "github.com/caicloud/clientset/listerfactory/auditregistration"
 	autoscaling "github.com/caicloud/clientset/listerfactory/autoscaling"
 	batch "github.com/caicloud/clientset/listerfactory/batch"
 	certificates "github.com/caicloud/clientset/listerfactory/certificates"
@@ -18,6 +19,7 @@ import (
 	extensions "github.com/caicloud/clientset/listerfactory/extensions"
 	internalinterfaces "github.com/caicloud/clientset/listerfactory/internalinterfaces"
 	networking "github.com/caicloud/clientset/listerfactory/networking"
+	node "github.com/caicloud/clientset/listerfactory/node"
 	policy "github.com/caicloud/clientset/listerfactory/policy"
 	rbac "github.com/caicloud/clientset/listerfactory/rbac"
 	scheduling "github.com/caicloud/clientset/listerfactory/scheduling"
@@ -62,6 +64,7 @@ func NewListerFactoryFromInformer(factory informers.SharedInformerFactory) Liste
 type ListerFactory interface {
 	Admissionregistration() admissionregistration.Interface
 	Apps() apps.Interface
+	Auditregistration() auditregistration.Interface
 	Autoscaling() autoscaling.Interface
 	Batch() batch.Interface
 	Certificates() certificates.Interface
@@ -70,6 +73,7 @@ type ListerFactory interface {
 	Events() events.Interface
 	Extensions() extensions.Interface
 	Networking() networking.Interface
+	Node() node.Interface
 	Policy() policy.Interface
 	Rbac() rbac.Interface
 	Scheduling() scheduling.Interface
@@ -83,6 +87,10 @@ func (f *clientListerFactory) Admissionregistration() admissionregistration.Inte
 
 func (f *clientListerFactory) Apps() apps.Interface {
 	return apps.New(f.client, f.tweakListOptions)
+}
+
+func (f *clientListerFactory) Auditregistration() auditregistration.Interface {
+	return auditregistration.New(f.client, f.tweakListOptions)
 }
 
 func (f *clientListerFactory) Autoscaling() autoscaling.Interface {
@@ -117,6 +125,10 @@ func (f *clientListerFactory) Networking() networking.Interface {
 	return networking.New(f.client, f.tweakListOptions)
 }
 
+func (f *clientListerFactory) Node() node.Interface {
+	return node.New(f.client, f.tweakListOptions)
+}
+
 func (f *clientListerFactory) Policy() policy.Interface {
 	return policy.New(f.client, f.tweakListOptions)
 }
@@ -143,6 +155,10 @@ func (f *informerListerFactory) Admissionregistration() admissionregistration.In
 
 func (f *informerListerFactory) Apps() apps.Interface {
 	return apps.NewFrom(f.factory)
+}
+
+func (f *informerListerFactory) Auditregistration() auditregistration.Interface {
+	return auditregistration.NewFrom(f.factory)
 }
 
 func (f *informerListerFactory) Autoscaling() autoscaling.Interface {
@@ -175,6 +191,10 @@ func (f *informerListerFactory) Extensions() extensions.Interface {
 
 func (f *informerListerFactory) Networking() networking.Interface {
 	return networking.NewFrom(f.factory)
+}
+
+func (f *informerListerFactory) Node() node.Interface {
+	return node.NewFrom(f.factory)
 }
 
 func (f *informerListerFactory) Policy() policy.Interface {
