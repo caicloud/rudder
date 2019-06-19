@@ -7,7 +7,6 @@ Copyright 2019 caicloud authors. All rights reserved.
 package admissionregistration
 
 import (
-	v1alpha1 "github.com/caicloud/clientset/listerfactory/admissionregistration/v1alpha1"
 	v1beta1 "github.com/caicloud/clientset/listerfactory/admissionregistration/v1beta1"
 	internalinterfaces "github.com/caicloud/clientset/listerfactory/internalinterfaces"
 	informers "k8s.io/client-go/informers"
@@ -18,8 +17,6 @@ import (
 type Interface interface {
 	// V1beta1 provides access to listers for resources in V1beta1.
 	V1beta1() v1beta1.Interface
-	// V1alpha1 provides access to listers for resources in V1alpha1.
-	V1alpha1() v1alpha1.Interface
 }
 
 type group struct {
@@ -48,13 +45,4 @@ func (g *group) V1beta1() v1beta1.Interface {
 
 func (g *informerGroup) V1beta1() v1beta1.Interface {
 	return v1beta1.NewFrom(g.factory)
-}
-
-// V1alpha1 returns a new v1alpha1.Interface.
-func (g *group) V1alpha1() v1alpha1.Interface {
-	return v1alpha1.New(g.client, g.tweakListOptions)
-}
-
-func (g *informerGroup) V1alpha1() v1alpha1.Interface {
-	return v1alpha1.NewFrom(g.factory)
 }

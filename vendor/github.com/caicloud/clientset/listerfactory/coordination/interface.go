@@ -7,6 +7,7 @@ Copyright 2019 caicloud authors. All rights reserved.
 package coordination
 
 import (
+	v1 "github.com/caicloud/clientset/listerfactory/coordination/v1"
 	v1beta1 "github.com/caicloud/clientset/listerfactory/coordination/v1beta1"
 	internalinterfaces "github.com/caicloud/clientset/listerfactory/internalinterfaces"
 	informers "k8s.io/client-go/informers"
@@ -15,6 +16,8 @@ import (
 
 // Interface provides access to each of this group's versions.
 type Interface interface {
+	// V1 provides access to listers for resources in V1.
+	V1() v1.Interface
 	// V1beta1 provides access to listers for resources in V1beta1.
 	V1beta1() v1beta1.Interface
 }
@@ -36,6 +39,15 @@ func New(client kubernetes.Interface, tweakListOptions internalinterfaces.TweakL
 // NewFrom returns a new Interface
 func NewFrom(factory informers.SharedInformerFactory) Interface {
 	return &informerGroup{factory: factory}
+}
+
+// V1 returns a new v1.Interface.
+func (g *group) V1() v1.Interface {
+	return v1.New(g.client, g.tweakListOptions)
+}
+
+func (g *informerGroup) V1() v1.Interface {
+	return v1.NewFrom(g.factory)
 }
 
 // V1beta1 returns a new v1beta1.Interface.

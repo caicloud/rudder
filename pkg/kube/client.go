@@ -280,12 +280,12 @@ func setDefaultJob(job *batchv1.Job) {
 	k8sbatchv1.SetObjectDefaults_Job(job)
 
 	in := job.Spec.Template.Spec
-	out := k8score.PodSpec{}
+	out := k8score.Pod{}
 
-	legacyscheme.Scheme.Convert(&in, &out, nil)
+	legacyscheme.Scheme.Convert(&in, &out.Spec, nil)
 	// drop disabled alpha fields in podSpec
-	k8spodutil.DropDisabledAlphaFields(&out)
-	legacyscheme.Scheme.Convert(&out, &job.Spec.Template.Spec, nil)
+	k8spodutil.DropDisabledPodFields(&out, nil)
+	legacyscheme.Scheme.Convert(&out.Spec, &job.Spec.Template.Spec, nil)
 }
 
 // Create creates all these resources.

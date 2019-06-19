@@ -393,7 +393,9 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 			policy := metav1.DeletePropagationBackground
 			options := &metav1.DeleteOptions{
 				PropagationPolicy: &policy,
-				Preconditions:     &metav1.Preconditions{&res.uid},
+				Preconditions: &metav1.Preconditions{
+					UID: &res.uid,
+				},
 			}
 			err = client.Delete(res.name, options)
 			if err != nil && !errors.IsNotFound(err) {
