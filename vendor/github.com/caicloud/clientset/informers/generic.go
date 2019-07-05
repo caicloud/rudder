@@ -26,8 +26,10 @@ import (
 	releasev1alpha1 "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	resourcev1alpha1 "github.com/caicloud/clientset/pkg/apis/resource/v1alpha1"
 	resourcev1beta1 "github.com/caicloud/clientset/pkg/apis/resource/v1beta1"
+	servicemeshv1alpha1 "github.com/caicloud/clientset/pkg/apis/servicemesh/v1alpha1"
 	servingv1alpha1 "github.com/caicloud/clientset/pkg/apis/serving/v1alpha1"
 	tenantv1alpha1 "github.com/caicloud/clientset/pkg/apis/tenant/v1alpha1"
+	workloadv1alpha1 "github.com/caicloud/clientset/pkg/apis/workload/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	informers "k8s.io/client-go/informers"
 	cache "k8s.io/client-go/tools/cache"
@@ -180,6 +182,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case resourcev1beta1.SchemeGroupVersion.WithResource("workloadnetworks"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Resource().V1beta1().WorkloadNetworks().Informer()}, nil
 
+		// Group=servicemesh.caicloud.io, Version=v1alpha1
+	case servicemeshv1alpha1.SchemeGroupVersion.WithResource("istios"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Servicemesh().V1alpha1().Istios().Informer()}, nil
+
 		// Group=serving.caicloud.io, Version=v1alpha1
 	case servingv1alpha1.SchemeGroupVersion.WithResource("scenes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Serving().V1alpha1().Scenes().Informer()}, nil
@@ -193,6 +199,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Tenant().V1alpha1().Partitions().Informer()}, nil
 	case tenantv1alpha1.SchemeGroupVersion.WithResource("tenants"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Tenant().V1alpha1().Tenants().Informer()}, nil
+
+		// Group=workload.caicloud.io, Version=v1alpha1
+	case workloadv1alpha1.SchemeGroupVersion.WithResource("workloads"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Workload().V1alpha1().Workloads().Informer()}, nil
+	case workloadv1alpha1.SchemeGroupVersion.WithResource("workloadrevisions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Workload().V1alpha1().WorkloadRevisions().Informer()}, nil
 
 	}
 

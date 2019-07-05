@@ -26,6 +26,9 @@ type AlertingSubRuleSpec struct {
 	// Target describes the target of the rule.
 	Target *ObjectReference `json:"target,omitempty"`
 
+	// CheckInterval is the interval to recheck the firing condition.
+	CheckInterval string `json:"checkInterval,omitempty"`
+
 	// Kind denotes whether this is a log alerting rule or a metric one.
 	Kind AlertingRuleKind `json:"kind"`
 
@@ -60,13 +63,10 @@ type FireCondition struct {
 	// For MetricAlertRules, Comparable is a Prometheus query
 	Comparable string `json:"comparable"`
 
-	// For LogAlertRules, Range is the time range  (unit: seconds) in which to search the keywords.
-	// For MetricAlertRules, a Prometheus alerting rule must stay pending for at least `Range`
-	// seconds to actually fire.
-	Range int `json:"range"`
-
-	// CheckInterval is the interval (unit: seconds) to recheck the firing condition.
-	CheckInterval int `json:"checkInterval,omitempty"`
+	// For LogAlertRules, Range is the time range in which to search the keywords.
+	// For MetricAlertRules, a Prometheus alerting rule must stay pending for at least this amount of time
+	// before it actually fires.
+	Range string `json:"range"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
