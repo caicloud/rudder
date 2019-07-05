@@ -43,7 +43,7 @@
 
 [[projects]]
   branch = "release-1.14"
-  digest = "1:f41e4bb49e8ce7534cf3d227994b8d91b289a8f110262556d57771a368e2e5d2"
+  digest = "1:49d056a910f6730d641196f30a505972e28d3d84131455b981fd284f4ca5f9b9"
   name = "github.com/caicloud/clientset"
   packages = [
     "informers",
@@ -82,10 +82,14 @@
     "informers/resource",
     "informers/resource/v1alpha1",
     "informers/resource/v1beta1",
+    "informers/servicemesh",
+    "informers/servicemesh/v1alpha1",
     "informers/serving",
     "informers/serving/v1alpha1",
     "informers/tenant",
     "informers/tenant/v1alpha1",
+    "informers/workload",
+    "informers/workload/v1alpha1",
     "kubernetes",
     "kubernetes/scheme",
     "kubernetes/typed/alerting/v1alpha1",
@@ -107,8 +111,10 @@
     "kubernetes/typed/release/v1alpha1",
     "kubernetes/typed/resource/v1alpha1",
     "kubernetes/typed/resource/v1beta1",
+    "kubernetes/typed/servicemesh/v1alpha1",
     "kubernetes/typed/serving/v1alpha1",
     "kubernetes/typed/tenant/v1alpha1",
+    "kubernetes/typed/workload/v1alpha1",
     "listerfactory",
     "listerfactory/admissionregistration",
     "listerfactory/admissionregistration/v1beta1",
@@ -179,8 +185,10 @@
     "listers/release/v1alpha1",
     "listers/resource/v1alpha1",
     "listers/resource/v1beta1",
+    "listers/servicemesh/v1alpha1",
     "listers/serving/v1alpha1",
     "listers/tenant/v1alpha1",
+    "listers/workload/v1alpha1",
     "pkg/apis/alerting/v1alpha1",
     "pkg/apis/apiextensions/v1beta1",
     "pkg/apis/apiregistration/v1",
@@ -200,18 +208,28 @@
     "pkg/apis/release/v1alpha1",
     "pkg/apis/resource/v1alpha1",
     "pkg/apis/resource/v1beta1",
+    "pkg/apis/servicemesh/v1alpha1",
     "pkg/apis/serving/v1alpha1",
     "pkg/apis/tenant/v1alpha1",
+    "pkg/apis/workload/v1alpha1",
     "util/event",
     "util/status",
     "util/syncqueue",
   ]
   pruneopts = "UT"
-  revision = "8b65758606dcc586afc96114ba34be16009cd369"
+  revision = "27fd074c8a55bfc320fb6ab4114421a447e844ef"
+
+[[projects]]
+  digest = "1:0720fd703371513d2e32abe3dfcf1f1c283ac90f0454be9e1a0e8179c59d7280"
+  name = "github.com/caicloud/go-common"
+  packages = ["interfaces"]
+  pruneopts = "UT"
+  revision = "fa5372afff619614d7af386e0cc63d270d005a9d"
+  version = "v0.1.4"
 
 [[projects]]
   branch = "master"
-  digest = "1:0c855a5bd9dbbe0714ac285b9859242b98d743694cbb219468c9f5b9728688c9"
+  digest = "1:809f8b01b119b8ce16c30a0f81b8cfb58a6af707e580f91f86ca825e924a8eda"
   name = "github.com/caicloud/rudder-client"
   packages = [
     "status",
@@ -222,7 +240,7 @@
     "status/universal",
   ]
   pruneopts = "UT"
-  revision = "ebb52d0026d6722ebf3f53382628319415e444d8"
+  revision = "e24e77234af9136d066598e08bb8f0a46e5e36a7"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -445,7 +463,7 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "ea8f1a30c4438cc8b13f05538385ad8dc6049b43"
+  revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
 
 [[projects]]
   digest = "1:7f8cf4434657e2b21067f70930402b43144b6ff94022171be5cfcb5924c7f27c"
@@ -472,14 +490,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:34e1fc56e564497983cefb665c0d0447187746591bf14094847a32bc0efe6fe5"
+  digest = "1:afb5346f71acefc3da7ad800f952cb2bcdb762194b05304bbf54d7f9490e31c5"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "516e3c20635fbe39539f7ed361a15c51fec29cd8"
+  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
 
 [[projects]]
   digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
@@ -823,7 +841,7 @@
   name = "k8s.io/cloud-provider"
   packages = ["features"]
   pruneopts = "UT"
-  revision = "c892ea32361a3655e7bd8c06f2d02dd8ce73dd78"
+  revision = "622ee4517beeb1ac87477a2a8b1a56ffce1f193d"
 
 [[projects]]
   branch = "pkg"
@@ -973,6 +991,7 @@
     "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1",
     "github.com/caicloud/clientset/pkg/apis/release/v1alpha1",
     "github.com/caicloud/clientset/util/syncqueue",
+    "github.com/caicloud/go-common/interfaces",
     "github.com/caicloud/rudder-client/status",
     "github.com/caicloud/rudder-client/status/universal",
     "github.com/evanphx/json-patch",
@@ -993,6 +1012,7 @@
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/runtime/serializer/json",
+    "k8s.io/apimachinery/pkg/selection",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/errors",
     "k8s.io/apimachinery/pkg/util/runtime",

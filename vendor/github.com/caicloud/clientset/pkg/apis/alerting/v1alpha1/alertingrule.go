@@ -20,9 +20,6 @@ type AlertingRule struct {
 
 // AlertingRuleSpec is the spec for a AlertingRule.
 type AlertingRuleSpec struct {
-	// Tenant is the name of the tenant who created this rule.
-	Tenant string `json:"tenant"`
-
 	// Template is the template from which the AlertingSubRules should be created.
 	Template *SubRuleTemplate `json:"template"`
 
@@ -80,6 +77,9 @@ type SubRuleTemplate struct {
 
 	// All sub rules created from this template share this `Kind` field
 	Kind AlertingRuleKind `json:"kind"`
+
+	// CheckInterval is the interval to recheck the firing condition.
+	CheckInterval string `json:"checkInterval,omitempty"`
 
 	// A list of specs for the AlertingSubRules under the AlertingRule. The `Target` and `Kind` field
 	// of these specs should be nil (if they are not, they should be ignored).
