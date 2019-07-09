@@ -130,8 +130,8 @@ func validateSpecifiedIPsSets(sets []WorkloadSubnetSpecifiedIPs) error {
 	keyMap := make(map[string]struct{}, len(sets))
 	for _, set := range sets {
 		// sub object check
-		if set.Network == "" || set.Subnet == "" || len(set.IPs) == 0 {
-			return fmt.Errorf("must set all of network, subnet and set")
+		if set.Network == "" || len(set.IPs) == 0 {
+			return fmt.Errorf("network and ips must be set")
 		}
 		// network+subnet duplicate
 		key := set.Network + "/" + set.Subnet
