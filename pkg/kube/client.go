@@ -186,7 +186,7 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 						return err
 					}
 					if isIpDecreasing {
-						err = c.applyIpSpecDecreasing(client, gvk, obj, existence)
+						err = c.applyIpSpecDecreasing(client, gvk, namespace, obj, existence)
 						if err != nil {
 							return err
 						}

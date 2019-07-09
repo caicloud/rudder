@@ -91,14 +91,6 @@ func getRuntimeObjectLabelValue(obj runtime.Object, key string) (string, bool) {
 	return v, ok
 }
 
-func getRuntimeObjectNamespace(obj runtime.Object) string {
-	mo := getMetaObjectFromRuntimeObject(obj)
-	if interfaces.IsNil(mo) {
-		return ""
-	}
-	return mo.GetNamespace()
-}
-
 // specified ips calculate
 
 func ipSets2AddressMap(sets []WorkloadSubnetSpecifiedIPs) map[string]struct{} {

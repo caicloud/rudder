@@ -47,8 +47,11 @@ func judgeIpSpecDecreasing(target, existence runtime.Object) (bool, error) {
 	return false, nil
 }
 
+// applyIpSpecDecreasing deal with release ip spec decreasing extra operations
+// 1. update deployment/statefulset annotations
+// 2. delete pods not in new list
 func (c *client) applyIpSpecDecreasing(client *ResourceClient,
-	gvk schema.GroupVersionKind, obj, existence runtime.Object) (err error) {
+	gvk schema.GroupVersionKind, namespace string, obj, existence runtime.Object) (err error) {
 	// parse and check ips
 	targetAnnoValue, _ := getRuntimeObjectAnnotationValue(obj, AnnoKeySpecifiedIPs)
 	ipSets, err := parseSpecifiedIPSetsFromString(targetAnnoValue)
@@ -59,12 +62,11 @@ func (c *client) applyIpSpecDecreasing(client *ResourceClient,
 	tempObj := existence.DeepCopyObject()
 	setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPs, targetAnnoValue)
 	setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPsDecreasing, "") // rm on final update
-	// do update
+	// do deployment/statefulset update
 	if _, err = client.Update(tempObj); err != nil {
 		return
 	}
 	// delete pods on deleted ips
-	namespace := getRuntimeObjectNamespace(obj)
 	podClient, err := c.pool.ClientFor(corev1.SchemeGroupVersion.WithKind("Pod"), namespace)
 	if err != nil {
 		return
@@ -75,15 +77,16 @@ func (c *client) applyIpSpecDecreasing(client *ResourceClient,
 		return
 	}
 	delList, err := deleteReleasePodsNotInList(podClient, releaseName, ipSets2AddressMap(ipSets))
-	for _, podName := range delList {
-		glog.Infof("applyIpSpecDecreasing[namespace:%v][release:%s][pod:%] deleted",
-			namespace, releaseName, podName)
+	for _, del := range delList {
+		glog.Infof("applyIpSpecDecreasing[namespace:%v][release:%s][pod:%s][ip:%s] deleted",
+			namespace, releaseName, del[0], del[1])
 	}
 	return err
 }
 
+// deleteReleasePodsNotInList delete release pods not in ipMap, return deleted pods name and ip
 func deleteReleasePodsNotInList(podClient *ResourceClient,
-	releaseName string, ipMap map[string]struct{}) (delList []string, err error) {
+	releaseName string, ipMap map[string]struct{}) (delList [][2]string, err error) {
 	// list pod of release
 	labelReq, err := labels.NewRequirement(LabelsKeyRelease, selection.Equals, []string{releaseName})
 	if err != nil {
@@ -112,7 +115,7 @@ func deleteReleasePodsNotInList(podClient *ResourceClient,
 		if err = podClient.Delete(pod.Name, nil); err != nil && !errors.IsNotFound(err) {
 			return
 		}
-		delList = append(delList, pod.Name)
+		delList = append(delList, [2]string{pod.Name, podIP})
 	}
 	return
 }
