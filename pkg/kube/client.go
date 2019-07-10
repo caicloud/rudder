@@ -181,7 +181,7 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 				}
 				// Deployment/StatefulSet ip list decrease
 				if gvk.Kind == "Deployment" || gvk.Kind == "StatefulSet" {
-					isIpDecreasing, err := judgeIpSpecDecreasing(obj, existence)
+					isIpDecreasing, err := judgeIPSpecDecreasing(obj, existence)
 					if err != nil {
 						return err
 					}

@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func judgeIpSpecDecreasing(target, existence runtime.Object) (bool, error) {
+func judgeIPSpecDecreasing(target, existence runtime.Object) (bool, error) {
 	// last operation not complete
 	_, decreasing := getRuntimeObjectAnnotationValue(existence, AnnoKeySpecifiedIPsDecreasing)
 	if decreasing {
@@ -47,16 +47,16 @@ func judgeIpSpecDecreasing(target, existence runtime.Object) (bool, error) {
 	return false, nil
 }
 
-// applyIpSpecDecreasing deal with release ip spec decreasing extra operations
+// applyIpSpecDecreasing deals with release ip spec decreasing extra operations
 // 1. update deployment/statefulset annotations
 // 2. delete pods not in new list
 func (c *client) applyIpSpecDecreasing(client *ResourceClient,
-	gvk schema.GroupVersionKind, namespace string, obj, existence runtime.Object) (err error) {
+	gvk schema.GroupVersionKind, namespace string, obj, existence runtime.Object) error {
 	// parse and check ips
 	targetAnnoValue, _ := getRuntimeObjectAnnotationValue(obj, AnnoKeySpecifiedIPs)
 	ipSets, err := parseSpecifiedIPSetsFromString(targetAnnoValue)
 	if err != nil {
-		return
+		return err
 	}
 	// set deployment/statefulset anno
 	tempObj := existence.DeepCopyObject()
@@ -64,17 +64,16 @@ func (c *client) applyIpSpecDecreasing(client *ResourceClient,
 	setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPsDecreasing, "") // rm on final update
 	// do deployment/statefulset update
 	if _, err = client.Update(tempObj); err != nil {
-		return
+		return err
 	}
 	// delete pods on deleted ips
 	podClient, err := c.pool.ClientFor(corev1.SchemeGroupVersion.WithKind("Pod"), namespace)
 	if err != nil {
-		return
+		return err
 	}
 	releaseName, _ := getRuntimeObjectLabelValue(obj, LabelsKeyRelease)
 	if len(releaseName) == 0 {
-		err = fmt.Errorf("get release name empty")
-		return
+		return fmt.Errorf("get release name empty")
 	}
 	delList, err := deleteReleasePodsNotInList(podClient, releaseName, ipSets2AddressMap(ipSets))
 	for _, del := range delList {
@@ -84,7 +83,7 @@ func (c *client) applyIpSpecDecreasing(client *ResourceClient,
 	return err
 }
 
-// deleteReleasePodsNotInList delete release pods not in ipMap, return deleted pods name and ip
+// deleteReleasePodsNotInList deletes release pods not in ipMap, return deleted pods name and ip
 func deleteReleasePodsNotInList(podClient *ResourceClient,
 	releaseName string, ipMap map[string]struct{}) (delList [][2]string, err error) {
 	// list pod of release
@@ -105,7 +104,7 @@ func deleteReleasePodsNotInList(podClient *ResourceClient,
 	for i := range podList.Items {
 		pod := &podList.Items[i]
 		podIP := pod.Status.PodIP
-		if len(podIP) == 0 {
+		if podIP == "" {
 			continue
 		}
 		if _, ok := ipMap[podIP]; ok {
