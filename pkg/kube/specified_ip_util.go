@@ -120,7 +120,7 @@ type WorkloadSubnetSpecifiedIPs struct {
 	IPs    []string `json:"ips"`
 }
 
-// validateSpecifiedIPsSets will check is sets league
+// validateSpecifiedIPsSets will check is sets legal
 func validateSpecifiedIPsSets(sets []WorkloadSubnetSpecifiedIPs) error {
 	if len(sets) == 0 {
 		return nil
