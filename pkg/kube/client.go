@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/caicloud/rudder/pkg/kube/apply"
 	"github.com/golang/glog"
 	"github.com/imdario/mergo"
 	batchv1 "k8s.io/api/batch/v1"
@@ -20,6 +19,8 @@ import (
 	k8spodutil "k8s.io/kubernetes/pkg/api/pod"
 	k8sbatchv1 "k8s.io/kubernetes/pkg/apis/batch/v1"
 	k8score "k8s.io/kubernetes/pkg/apis/core"
+
+	"github.com/caicloud/rudder/pkg/kube/apply"
 )
 
 // CacheLayers Contains layers for all kinds.
@@ -177,6 +178,19 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 						return err
 					}
 					continue
+				}
+				// Deployment/StatefulSet ip list decrease
+				if gvk.Kind == "Deployment" || gvk.Kind == "StatefulSet" {
+					isIpDecreasing, err := judgeIPSpecDecreasing(obj, existence)
+					if err != nil {
+						return err
+					}
+					if isIpDecreasing {
+						err = c.applyIpSpecDecreasing(client, gvk, namespace, obj, existence)
+						if err != nil {
+							return err
+						}
+					}
 				}
 				if err := apply.Apply(gvk, existence, obj); err != nil {
 					return err
