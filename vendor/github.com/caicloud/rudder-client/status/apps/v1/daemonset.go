@@ -22,6 +22,7 @@ var (
 	dsetErrorEventCases = []event.EventCase{
 		// match all FailedCreate
 		{EventType: corev1.EventTypeWarning, Reason: event.FailedCreatePodReason},
+		{EventType: corev1.EventTypeWarning, Reason: event.FailedPlacementPodReason},
 	}
 )
 
