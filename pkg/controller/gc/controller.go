@@ -352,7 +352,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-
+	glog.V(2).Infof("collect release namespace %s name %s", release.Namespace, release.Name)
 	desired := map[string]bool{}
 	releaseAlived := false
 	if err == nil {
@@ -360,6 +360,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 		if err != nil {
 			return err
 		}
+		glog.V(2).Infof("release.UID %s current.UID %s", release.UID, current.GetUID())
 		if release.UID == current.GetUID() {
 			release = rel.(*releaseapi.Release)
 			resources := render.SplitManifest(release.Status.Manifest)
@@ -368,7 +369,9 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 				return err
 			}
 			for i, obj := range objs {
-				desired[keyForResource(obj.GetObjectKind().GroupVersionKind().GroupKind(), accessors[i].GetName())] = true
+				key := keyForResource(obj.GetObjectKind().GroupVersionKind().GroupKind(), accessors[i].GetName())
+				desired[key] = true
+				glog.V(2).Infof("add release(%s/%s) desired resource %s", release.Namespace, release.Name, key)
 			}
 			releaseAlived = true
 		}
