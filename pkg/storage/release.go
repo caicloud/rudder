@@ -192,7 +192,7 @@ func (rs *releaseStorage) Update(release *releaseapi.Release) (*releaseapi.Relea
 		rel.Status.LastUpdateTime = metav1.Now()
 		rel.Status.Manifest = release.Status.Manifest
 		rel.Status.Version = release.Status.Version
-		rel.Status.Conditions = []releaseapi.ReleaseCondition{ConditionUpdating()}
+		rel.Status.Conditions = []releaseapi.ReleaseCondition{Condition(Updating, "")}
 	})
 }
 
@@ -236,7 +236,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 	}
 	if err != nil {
 		// Record condition.
-		return rs.FlushConditions(ConditionFailure(err.Error()))
+		return rs.FlushConditions(Condition(Failure, err.Error()))
 	}
 	// FIX: use temporary render to avoid concurrent issue
 	// need render again instead of using history's manifest directly because of the history's manifest
@@ -261,7 +261,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 		release.Status.Version = history.Spec.Version
 		release.Status.LastUpdateTime = metav1.Now()
 		release.Status.Manifest = render.MergeResources(manifests)
-		release.Status.Conditions = []releaseapi.ReleaseCondition{ConditionRollbacking()}
+		release.Status.Conditions = []releaseapi.ReleaseCondition{Condition(Rollbacking, "")}
 	})
 }
 
