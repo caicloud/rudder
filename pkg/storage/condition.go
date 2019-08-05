@@ -16,7 +16,7 @@ const (
 	Rollbacking releaseConditionType = "Rollbacking"
 )
 
-// Condition returns a release condition based on given release status.
+// Condition returns a release condition based on given release condition type.
 func Condition(typ releaseConditionType, msg string) releaseapi.ReleaseCondition {
 	ret := releaseapi.ReleaseCondition{
 		Status:             core.ConditionTrue,
