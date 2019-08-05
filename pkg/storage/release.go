@@ -9,6 +9,7 @@ import (
 	releasev1alpha1 "github.com/caicloud/clientset/kubernetes/typed/release/v1alpha1"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/rudder/pkg/kube"
+	"github.com/caicloud/rudder/pkg/render"
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -237,6 +238,21 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 		// Record condition.
 		return rs.FlushConditions(ConditionFailure(err.Error()))
 	}
+	// FIX: use temporary render to avoid concurrent issue
+	// need render again instead of using history's manifest directly because of the history's manifest
+	// remained suspend status when be generated.
+	carrier, err := render.NewRender().Render(&render.RenderOptions{
+		Namespace: rs.release.Namespace,
+		Release:   rs.release.Name,
+		Version:   history.Spec.Version,
+		Template:  history.Spec.Template,
+		Config:    history.Spec.Config,
+		Suspend:   rs.release.Spec.Suspend,
+	})
+	if err != nil {
+		return nil, err
+	}
+	manifests := carrier.Resources()
 	return rs.Patch(func(release *releaseapi.Release) {
 		release.Spec.Description = history.Spec.Description
 		release.Spec.Template = history.Spec.Template
@@ -244,7 +260,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 		release.Spec.RollbackTo = nil
 		release.Status.Version = history.Spec.Version
 		release.Status.LastUpdateTime = metav1.Now()
-		release.Status.Manifest = history.Spec.Manifest
+		release.Status.Manifest = render.MergeResources(manifests)
 		release.Status.Conditions = []releaseapi.ReleaseCondition{ConditionRollbacking()}
 	})
 }

@@ -28,24 +28,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 			glog.Errorf("Failed to rollback release %s/%s: %v", release.Namespace, release.Name, err)
 			return recordError(backend, err)
 		}
-
-		// FIX: use temporary render to avoid concurrent issue
-		// need render again instead of using rel.Status.Manifest directly because of the rel.Status.Manifest
-		// remained suspend status when be generated.
-		carrier, err := render.NewRender().Render(&render.RenderOptions{
-			Namespace: rel.Namespace,
-			Release:   rel.Name,
-			Version:   rel.Status.Version,
-			Template:  rel.Spec.Template,
-			Config:    rel.Spec.Config,
-			Suspend:   rel.Spec.Suspend,
-		})
-		if err != nil {
-			// Record error status
-			glog.Errorf("Failed to render release %s/%s: %v", release.Namespace, release.Name, err)
-			return recordError(backend, err)
-		}
-		manifests = carrier.Resources()
+		manifests = render.SplitManifest(rel.Status.Manifest)
 	} else {
 		glog.V(4).Infof("Apply release %s/%s", release.Namespace, release.Name)
 
