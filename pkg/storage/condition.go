@@ -6,25 +6,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type Reason string
+type releaseConditionType string
 
 const (
-	Available   Reason = "Available"
-	Failure     Reason = "Failure"
-	Creating    Reason = "Creating"
-	Updating    Reason = "Updating"
-	Rollbacking Reason = "Rollbacking"
+	Available   releaseConditionType = "Available"
+	Failure     releaseConditionType = "Failure"
+	Creating    releaseConditionType = "Creating"
+	Updating    releaseConditionType = "Updating"
+	Rollbacking releaseConditionType = "Rollbacking"
 )
 
-// Condition returns a release condition based on given reason.
-func Condition(reason Reason, msg string) releaseapi.ReleaseCondition {
+// Condition returns a release condition based on given release status.
+func Condition(typ releaseConditionType, msg string) releaseapi.ReleaseCondition {
 	ret := releaseapi.ReleaseCondition{
 		Status:             core.ConditionTrue,
 		LastTransitionTime: metav1.Now(),
 		Message:            msg,
-		Reason:             string(reason),
+		Reason:             string(typ),
 	}
-	switch reason {
+	switch typ {
 	case Available:
 		ret.Type = releaseapi.ReleaseAvailable
 	case Failure:
