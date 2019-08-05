@@ -19,7 +19,7 @@ func referencesForRelease(release *releaseapi.Release) []metav1.OwnerReference {
 // recordError records err for release.
 func recordError(backend storage.ReleaseStorage, target error) error {
 	// Record error status
-	_, err := backend.FlushConditions(storage.ConditionFailure(target.Error()))
+	_, err := backend.FlushConditions(storage.Condition(storage.Failure, target.Error()))
 	if err == nil {
 		return target
 	}
