@@ -165,7 +165,7 @@ func (r *render) renderConfig(options *RenderOptions) (string, error) {
 				glog.Error(err)
 			}
 		case "Job", "DaemonSet":
-			glog.Warning("controller type is: %s, release suspend flag can not work on it", typ)
+			glog.Warningf("controller type is: %s, release suspend flag can not work on it", typ)
 		default:
 			err = fmt.Errorf("illegal controller type: %s", typ)
 		}
