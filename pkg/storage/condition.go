@@ -6,66 +6,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Reasons for releases
+type releaseConditionReason string
+
 const (
-	ReasonAvailable   = "Available"
-	ReasonFailure     = "Failure"
-	ReasonCreating    = "Creating"
-	ReasonUpdating    = "Updating"
-	ReasonRollbacking = "Rollbacking"
+	ReleaseReasonAvailable   releaseConditionReason = "Available"
+	ReleaseReasonFailure     releaseConditionReason = "Failure"
+	ReleaseReasonCreating    releaseConditionReason = "Creating"
+	ReleaseReasonUpdating    releaseConditionReason = "Updating"
+	ReleaseReasonRollbacking releaseConditionReason = "Rollbacking"
 )
 
-// ConditionAvailable returns an available condition.
-func ConditionAvailable() releaseapi.ReleaseCondition {
-	return releaseapi.ReleaseCondition{
-		Type:               releaseapi.ReleaseAvailable,
+// Condition returns a release condition based on given release condition reason.
+func Condition(r releaseConditionReason, msg string) releaseapi.ReleaseCondition {
+	ret := releaseapi.ReleaseCondition{
 		Status:             core.ConditionTrue,
 		LastTransitionTime: metav1.Now(),
-		Reason:             ReasonAvailable,
-		Message:            "",
+		Message:            msg,
+		Reason:             string(r),
 	}
-}
-
-// ConditionFailure returns a failure condition.
-func ConditionFailure(message string) releaseapi.ReleaseCondition {
-	return releaseapi.ReleaseCondition{
-		Type:               releaseapi.ReleaseFailure,
-		Status:             core.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             ReasonFailure,
-		Message:            message,
+	switch r {
+	case ReleaseReasonAvailable:
+		ret.Type = releaseapi.ReleaseAvailable
+	case ReleaseReasonFailure:
+		ret.Type = releaseapi.ReleaseFailure
+	case ReleaseReasonCreating, ReleaseReasonUpdating, ReleaseReasonRollbacking:
+		ret.Type = releaseapi.ReleaseProgressing
 	}
-}
-
-// ConditionCreating returns a creating condition.
-func ConditionCreating() releaseapi.ReleaseCondition {
-	return releaseapi.ReleaseCondition{
-		Type:               releaseapi.ReleaseProgressing,
-		Status:             core.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             ReasonCreating,
-		Message:            "",
-	}
-}
-
-// ConditionUpdating returns a updating condition.
-func ConditionUpdating() releaseapi.ReleaseCondition {
-	return releaseapi.ReleaseCondition{
-		Type:               releaseapi.ReleaseProgressing,
-		Status:             core.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             ReasonUpdating,
-		Message:            "",
-	}
-}
-
-// ConditionRollbacking returns a rollbacking condition.
-func ConditionRollbacking() releaseapi.ReleaseCondition {
-	return releaseapi.ReleaseCondition{
-		Type:               releaseapi.ReleaseProgressing,
-		Status:             core.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             ReasonRollbacking,
-		Message:            "",
-	}
+	return ret
 }
