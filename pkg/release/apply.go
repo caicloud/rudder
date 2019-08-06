@@ -129,7 +129,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		glog.Infof("Failed to apply resources for release %s/%s: %v", release.Namespace, release.Name, err)
 		return recordError(backend, err)
 	}
-	_, err := backend.FlushConditions(storage.Condition(storage.Available, ""))
+	_, err := backend.FlushConditions(storage.Condition(storage.ReleaseReasonAvailable, ""))
 	if err != nil {
 		return err
 	}
