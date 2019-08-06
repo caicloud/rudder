@@ -7,7 +7,9 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/imdario/mergo"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -181,11 +183,11 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 				}
 				// Deployment/StatefulSet ip list decrease
 				if gvk.Kind == "Deployment" || gvk.Kind == "StatefulSet" {
-					isIpDecreasing, err := judgeIPSpecDecreasing(obj, existence)
+					isIPDecreasing, err := judgeIPSpecDecreasing(obj, existence)
 					if err != nil {
 						return err
 					}
-					if isIpDecreasing {
+					if isIPDecreasing {
 						err = c.applyIpSpecDecreasing(client, gvk, namespace, obj, existence)
 						if err != nil {
 							return err
@@ -195,6 +197,15 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 				if err := apply.Apply(gvk, existence, obj); err != nil {
 					return err
 				}
+
+				if gvk.Kind == "Deployment" {
+					err := c.applyDeployment(client, gvk, existence, obj)
+					if err != nil {
+						return err
+					}
+					continue
+				}
+
 				result, err := client.Update(obj)
 				if err != nil {
 					return err
@@ -215,6 +226,58 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 					gvk.Kind, options.OwnerReferences)
 			}
 		}
+	}
+	return nil
+}
+
+func (c *client) applyDeployment(rc *ResourceClient, gvk schema.GroupVersionKind, old, obj runtime.Object) error {
+	newDeployment := obj.(*appsv1.Deployment)
+	oldDeployment := old.(*appsv1.Deployment)
+	// Update is not allowed to set Spec.Selector for all groups/versions except extensions/v1beta1 and apps/v1beta1.
+	// If RequestInfo is nil, it is better to revert to old behavior (i.e. allow update to set Spec.Selector)
+	// to prevent unintentionally breaking users who may rely on the old behavior.
+	// So if we want to set Spec.Selector forcedly, need recreate it.
+	if !apiequality.Semantic.DeepEqual(newDeployment.Spec.Selector, oldDeployment.Spec.Selector) {
+		deletePolicy := metav1.DeletePropagationBackground
+		err := rc.Delete(newDeployment.Name, &metav1.DeleteOptions{
+			PropagationPolicy: &deletePolicy,
+		})
+		if err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		if c.layers != nil {
+			// Record the result into cache.
+			layer, err := c.layers.LayerFor(gvk)
+			if err != nil {
+				return err
+			}
+			layer.Deleted(obj)
+		}
+		result, err := rc.Create(obj)
+		if err != nil {
+			return err
+		}
+		if c.layers != nil {
+			// Record the result into cache.
+			layer, err := c.layers.LayerFor(gvk)
+			if err != nil {
+				return err
+			}
+			layer.Created(result)
+		}
+		return nil
+	}
+	result, err := rc.Update(obj)
+	if err != nil {
+		return err
+	}
+	if c.layers != nil {
+		// Record the result into cache.
+		layer, err := c.layers.LayerFor(gvk)
+		if err != nil {
+			return err
+		}
+		layer.Updated(result)
 	}
 	return nil
 }
