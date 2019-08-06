@@ -11,6 +11,7 @@ import (
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/render"
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -158,9 +159,10 @@ func (rs *releaseStorage) Release() (*releaseapi.Release, error) {
 	return rs.release, nil
 }
 
-// own checks if the history is belong to current release.
+// own checks if the history belongs to current release.
 func (rs *releaseStorage) own(history *releaseapi.ReleaseHistory) bool {
 	if len(history.OwnerReferences) != 1 {
+		glog.Errorf("multiple owner references %v for history %s", history.OwnerReferences, history.Name)
 		return false
 	}
 	or := history.OwnerReferences[0]
@@ -172,13 +174,13 @@ func (rs *releaseStorage) own(history *releaseapi.ReleaseHistory) bool {
 
 // Update updates the release.
 func (rs *releaseStorage) Update(release *releaseapi.Release) (*releaseapi.Release, error) {
-	history, err := rs.History(release.Status.Version)
+	_, err := rs.History(release.Status.Version)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
+	// if the history doesn't exist, create it
 	if err != nil {
-		// Create history
-		history = constructReleaseHistory(release, release.Status.Version)
+		history := constructReleaseHistory(release, release.Status.Version)
 		_, err := rs.releaseHistoryClient.Create(history)
 		if err != nil {
 			return nil, err
@@ -192,7 +194,7 @@ func (rs *releaseStorage) Update(release *releaseapi.Release) (*releaseapi.Relea
 		rel.Status.LastUpdateTime = metav1.Now()
 		rel.Status.Manifest = release.Status.Manifest
 		rel.Status.Version = release.Status.Version
-		rel.Status.Conditions = []releaseapi.ReleaseCondition{ConditionUpdating()}
+		rel.Status.Conditions = []releaseapi.ReleaseCondition{Condition(ReleaseReasonUpdating, "")}
 	})
 }
 
@@ -236,7 +238,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 	}
 	if err != nil {
 		// Record condition.
-		return rs.FlushConditions(ConditionFailure(err.Error()))
+		return rs.FlushConditions(Condition(ReleaseReasonFailure, err.Error()))
 	}
 	// FIX: use temporary render to avoid concurrent issue
 	// need render again instead of using history's manifest directly because of the history's manifest
@@ -261,7 +263,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 		release.Status.Version = history.Spec.Version
 		release.Status.LastUpdateTime = metav1.Now()
 		release.Status.Manifest = render.MergeResources(manifests)
-		release.Status.Conditions = []releaseapi.ReleaseCondition{ConditionRollbacking()}
+		release.Status.Conditions = []releaseapi.ReleaseCondition{Condition(ReleaseReasonRollbacking, "")}
 	})
 }
 
@@ -375,15 +377,6 @@ func (rs *releaseStorage) FlushConditions(conditions ...releaseapi.ReleaseCondit
 	return rs.Patch(func(release *releaseapi.Release) {
 		release.Status.Conditions = conditions
 	})
-}
-
-// shortenConditions limits the length of conditions.
-func shortenConditions(release *releaseapi.Release) {
-	const maxLength = 5
-	length := len(release.Status.Conditions)
-	if length > maxLength {
-		release.Status.Conditions = release.Status.Conditions[length-maxLength:]
-	}
 }
 
 // generateReleaseHistoryName generates the name of release history.
