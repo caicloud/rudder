@@ -73,7 +73,7 @@ func startStatusController(ctx ControllerContext) error {
 		ctx.InformerFactory.Release().V1alpha1().Releases(),
 		ctx.AvailableKinds,
 		ctx.Resources,
-		ctx.ResyncPeriod,
+		ctx.ReleaseResyncPeriod,
 	)
 	if err != nil {
 		return err
