@@ -24,8 +24,8 @@ type ReleaseServer struct {
 	ConcurrentStatusSyncs int32
 	// ResyncPeriod describes the period of informer resync.
 	ResyncPeriod time.Duration
-	// HandlerResyncPeriod is the resync period to invoke informer event handler.
-	HandlerResyncPeriod int32
+	// ReleaseResyncPeriod is the resync period to invoke informer event handler.
+	ReleaseResyncPeriod time.Duration
 }
 
 // NewReleaseServer creates a new CMServer with a default config.
@@ -34,7 +34,7 @@ func NewReleaseServer() *ReleaseServer {
 		ConcurrentGCSyncs:     5,
 		ConcurrentStatusSyncs: 5,
 		ResyncPeriod:          5 * time.Minute,
-		HandlerResyncPeriod:   30,
+		ReleaseResyncPeriod:   30 * time.Second,
 	}
 }
 
@@ -46,5 +46,5 @@ func (s *ReleaseServer) AddFlags(fs *pflag.FlagSet, allControllers []string) {
 	fs.Int32Var(&s.ConcurrentGCSyncs, "concurrent-gc-syncs", s.ConcurrentGCSyncs, "The number of garbage collector worker that are allowed to sync concurrently")
 	fs.Int32Var(&s.ConcurrentStatusSyncs, "concurrent-status-syncs", s.ConcurrentStatusSyncs, "The number of status controller worker that are allowed to sync concurrently")
 	fs.DurationVar(&s.ResyncPeriod, "resync-period", s.ResyncPeriod, "ResyncPeriod describes the period of informer resync")
-	fs.Int32Var(&s.HandlerResyncPeriod, "handler-resync-period", s.HandlerResyncPeriod, "HandlerResyncPeriod is the resync period to invoke informer event handler")
+	fs.DurationVar(&s.ReleaseResyncPeriod, "handler-resync-period", s.ReleaseResyncPeriod, "ReleaseResyncPeriod is the resync period to invoke informer event handler")
 }
