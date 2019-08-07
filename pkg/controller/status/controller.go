@@ -53,7 +53,7 @@ func NewStatusController(
 	releaseInformer informerrelease.ReleaseInformer,
 	childResources []schema.GroupVersionKind,
 	resources kube.APIResources,
-	resyncPeriod int32,
+	resyncPeriod time.Duration,
 ) (*StatusController, error) {
 	factory := store.SharedInformerFactory()
 	extraResources := []schema.GroupVersionKind{
@@ -90,7 +90,7 @@ func NewStatusController(
 		DeleteFunc: func(obj interface{}) {
 			sc.workqueue.Enqueue(obj)
 		},
-	}, time.Duration(resyncPeriod)*time.Second)
+	}, resyncPeriod)
 	// init subresources event handler
 	for _, gvk := range childResources {
 		resource, err := resources.ResourceFor(gvk)

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/caicloud/clientset/informers"
 	"github.com/caicloud/clientset/kubernetes"
 	"github.com/caicloud/clientset/kubernetes/scheme"
@@ -44,8 +46,8 @@ type ControllerContext struct {
 	IgnoredKinds []schema.GroupVersionKind
 	// Stop is the stop channel
 	Stop <-chan struct{}
-	// ResyncPeriod is the resync period to invoke informer event handler
-	ResyncPeriod int32
+	// ReleaseResyncPeriod is the resync period to invoke informer event handler for release
+	ReleaseResyncPeriod time.Duration
 }
 
 // Run runs the ReleaseServer. This should never exit.
@@ -76,18 +78,18 @@ func Run(s *options.ReleaseServer) error {
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, s.ResyncPeriod)
 	informerStore := store.NewIntegrationStore(resources, informerFactory, stop)
 	ctx := ControllerContext{
-		Options:         *s,
-		Scheme:          scheme.Scheme,
-		Codec:           kube.NewYAMLCodec(scheme.Scheme, scheme.Scheme),
-		Resources:       resources,
-		KubeClient:      kubeClient,
-		ClientPool:      pool,
-		InformerFactory: informerFactory,
-		InformerStore:   informerStore,
-		AvailableKinds:  AvailableKinds(),
-		IgnoredKinds:    IgnoredKinds(),
-		Stop:            stop,
-		ResyncPeriod:    s.HandlerResyncPeriod,
+		Options:             *s,
+		Scheme:              scheme.Scheme,
+		Codec:               kube.NewYAMLCodec(scheme.Scheme, scheme.Scheme),
+		Resources:           resources,
+		KubeClient:          kubeClient,
+		ClientPool:          pool,
+		InformerFactory:     informerFactory,
+		InformerStore:       informerStore,
+		AvailableKinds:      AvailableKinds(),
+		IgnoredKinds:        IgnoredKinds(),
+		Stop:                stop,
+		ReleaseResyncPeriod: s.ReleaseResyncPeriod,
 	}
 	initializers, err := NewControllerInitializers(s.Controllers)
 	if err != nil {
