@@ -25,6 +25,14 @@ import (
 	"github.com/caicloud/rudder/pkg/kube/apply"
 )
 
+type layerOperator string
+
+const (
+	layerUpdate layerOperator = "Update"
+	layerCreate layerOperator = "Create"
+	layerDelete layerOperator = "Delete"
+)
+
 // CacheLayers Contains layers for all kinds.
 type CacheLayers interface {
 	// LayerFor get a layer for concrete kind.
@@ -161,13 +169,8 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 			if err != nil {
 				return err
 			}
-			if c.layers != nil {
-				// Record the result into cache.
-				layer, err := c.layers.LayerFor(gvk)
-				if err != nil {
-					return err
-				}
-				layer.Created(result)
+			if err := layerOperation(c.layers, layerCreate, gvk, result); err != nil {
+				return err
 			}
 		} else {
 			// Update
@@ -210,13 +213,8 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 				if err != nil {
 					return err
 				}
-				if c.layers != nil {
-					// Record the result into cache.
-					layer, err := c.layers.LayerFor(gvk)
-					if err != nil {
-						return err
-					}
-					layer.Updated(result)
+				if err := layerOperation(c.layers, layerUpdate, gvk, result); err != nil {
+					return err
 				}
 			} else {
 				glog.Errorf("%+v, %v", existence, err)
@@ -245,41 +243,20 @@ func (c *client) applyDeployment(rc *ResourceClient, gvk schema.GroupVersionKind
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
-		if c.layers != nil {
-			// Record the result into cache.
-			layer, err := c.layers.LayerFor(gvk)
-			if err != nil {
-				return err
-			}
-			layer.Deleted(obj)
+		if err := layerOperation(c.layers, layerDelete, gvk, obj); err != nil {
+			return err
 		}
 		result, err := rc.Create(obj)
 		if err != nil {
 			return err
 		}
-		if c.layers != nil {
-			// Record the result into cache.
-			layer, err := c.layers.LayerFor(gvk)
-			if err != nil {
-				return err
-			}
-			layer.Created(result)
-		}
-		return nil
+		return layerOperation(c.layers, layerCreate, gvk, result)
 	}
 	result, err := rc.Update(obj)
 	if err != nil {
 		return err
 	}
-	if c.layers != nil {
-		// Record the result into cache.
-		layer, err := c.layers.LayerFor(gvk)
-		if err != nil {
-			return err
-		}
-		layer.Updated(result)
-	}
-	return nil
+	return layerOperation(c.layers, layerUpdate, gvk, result)
 }
 
 func (c *client) applyJob(client *ResourceClient, gvk schema.GroupVersionKind, obj, existence runtime.Object) error {
@@ -302,27 +279,14 @@ func (c *client) applyJob(client *ResourceClient, gvk schema.GroupVersionKind, o
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	if c.layers != nil {
-		// Record the result into cache.
-		layer, err := c.layers.LayerFor(gvk)
-		if err != nil {
-			return err
-		}
-		layer.Deleted(obj)
+	if err := layerOperation(c.layers, layerDelete, gvk, obj); err != nil {
+		return err
 	}
 	result, err := client.Create(obj)
 	if err != nil {
 		return err
 	}
-	if c.layers != nil {
-		// Record the result into cache.
-		layer, err := c.layers.LayerFor(gvk)
-		if err != nil {
-			return err
-		}
-		layer.Created(result)
-	}
-	return nil
+	return layerOperation(c.layers, layerCreate, gvk, result)
 }
 
 func jobEqual(desired, current *batchv1.Job) (bool, error) {
@@ -398,13 +362,8 @@ func (c *client) Create(namespace string, resources []string, options CreateOpti
 		if err != nil {
 			return err
 		}
-		if c.layers != nil {
-			// Record the result into cache.
-			layer, err := c.layers.LayerFor(gvk)
-			if err != nil {
-				return err
-			}
-			layer.Created(result)
+		if err := layerOperation(c.layers, layerCreate, gvk, result); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -526,13 +485,8 @@ func (c *client) update(namespace string, updates []resources, options UpdateOpt
 		if err != nil {
 			return err
 		}
-		if c.layers != nil {
-			// Record the deleted obj into cache.
-			layer, err := c.layers.LayerFor(gvk)
-			if err != nil {
-				return err
-			}
-			layer.Updated(result)
+		if err := layerOperation(c.layers, layerUpdate, gvk, result); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -575,15 +529,30 @@ func (c *client) Delete(namespace string, resources []string, options DeleteOpti
 			if err != nil && !errors.IsNotFound(err) {
 				return err
 			}
-			if c.layers != nil {
-				// Record the deleted obj into cache.
-				layer, err := c.layers.LayerFor(gvk)
-				if err != nil {
-					return err
-				}
-				layer.Deleted(obj)
+			if err := layerOperation(c.layers, layerDelete, gvk, obj); err != nil {
+				return err
 			}
 		}
+	}
+	return nil
+}
+
+func layerOperation(layers CacheLayers, op layerOperator, gvk schema.GroupVersionKind, obj runtime.Object) error {
+	if layers == nil {
+		return nil
+	}
+	// Record the changed obj into cache.
+	layer, err := layers.LayerFor(gvk)
+	if err != nil {
+		return err
+	}
+	switch op {
+	case layerUpdate:
+		layer.Updated(obj)
+	case layerCreate:
+		layer.Created(obj)
+	case layerDelete:
+		layer.Deleted(obj)
 	}
 	return nil
 }
