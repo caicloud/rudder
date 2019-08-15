@@ -44,6 +44,8 @@ type ControllerContext struct {
 	IgnoredKinds []schema.GroupVersionKind
 	// Stop is the stop channel
 	Stop <-chan struct{}
+	// ResyncPeriod is the resync period to invoke informer event handler
+	ResyncPeriod int32
 }
 
 // Run runs the ReleaseServer. This should never exit.
@@ -85,6 +87,7 @@ func Run(s *options.ReleaseServer) error {
 		AvailableKinds:  AvailableKinds(),
 		IgnoredKinds:    IgnoredKinds(),
 		Stop:            stop,
+		ResyncPeriod:    s.HandlerResyncPeriod,
 	}
 	initializers, err := NewControllerInitializers(s.Controllers)
 	if err != nil {
