@@ -49,6 +49,7 @@ type releaseResources struct {
 	ignored  map[schema.GroupVersionKind]bool
 }
 
+// newReleaseResources creates a releaseResources with given ignored GVK
 func newReleaseResources(ignored []schema.GroupVersionKind) *releaseResources {
 	r := &releaseResources{
 		releases: make(map[types.UID]*release),
@@ -60,24 +61,28 @@ func newReleaseResources(ignored []schema.GroupVersionKind) *releaseResources {
 	return r
 }
 
+// duplicateReleases returns a list of releases with name, namespace and uid only
 func (r *releaseResources) duplicateReleases() []*releaseapi.Release {
-	fakeReleases := make([]*releaseapi.Release, 0, len(r.releases))
 	r.lock.RLock()
 	defer r.lock.RUnlock()
+
+	ret := make([]*releaseapi.Release, 0, len(r.releases))
 	for _, r := range r.releases {
-		rel := &releaseapi.Release{}
+		var rel releaseapi.Release
 		rel.Namespace = r.namespace
 		rel.Name = r.name
 		rel.UID = r.uid
-		fakeReleases = append(fakeReleases, rel)
+		ret = append(ret, &rel)
 	}
-	return fakeReleases
+	return ret
 }
 
-func (r *releaseResources) resources(release *releaseapi.Release) []*resource {
+// resources returns the list of resources of the specified release uid
+func (r *releaseResources) resources(uid types.UID) []*resource {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
-	rs, ok := r.releases[release.UID]
+
+	rs, ok := r.releases[uid]
 	if !ok {
 		return nil
 	}
@@ -88,75 +93,77 @@ func (r *releaseResources) resources(release *releaseapi.Release) []*resource {
 	return resources
 }
 
+// set adds or updates object's owner's resource
 func (r *releaseResources) set(gvk schema.GroupVersionKind, obj runtime.Object) {
 	if r.ignored[gvk] {
 		return
 	}
-	if accessor, ok := obj.(metav1.ObjectMetaAccessor); ok {
-		meta := accessor.GetObjectMeta()
-		owners := meta.GetOwnerReferences()
-		if len(owners) <= 0 || len(owners) >= 2 {
-			// If the resource have no owner reference or have two or more references,
-			// we can't handle it.
-			// Even if the resource have a reference to a release, we leave it to the
-			// other owners.
-			// We can call the behavior as reference counter.
-			return
-		}
-		owner := owners[0]
-		if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
-			// If the owner is not release, we don't need handle it.
-			return
-		}
-
-		r.lock.Lock()
-		defer r.lock.Unlock()
-		rs, ok := r.releases[owner.UID]
-		if !ok {
-			rs = &release{
-				namespace: meta.GetNamespace(),
-				name:      owner.Name,
-				uid:       owner.UID,
-				resources: map[types.UID]*resource{},
-			}
-		}
-		rs.resources[meta.GetUID()] = &resource{
-			gvk:       gvk,
-			namespace: meta.GetNamespace(),
-			name:      meta.GetName(),
-			uid:       meta.GetUID(),
-			object:    obj,
-		}
-		r.releases[owner.UID] = rs
+	accessor, ok := obj.(metav1.ObjectMetaAccessor)
+	if !ok {
+		return
 	}
+	meta := accessor.GetObjectMeta()
+	owners := meta.GetOwnerReferences()
+	if len(owners) <= 0 || len(owners) >= 2 {
+		// If the resource have no owner reference or have two or more, we can't handle it.
+		// Even if the resource have a reference to a release, we leave it to the other owners.
+		// We can call the behavior as reference counter.
+		return
+	}
+	owner := owners[0]
+	if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
+		// If the owner is not release, we don't need handle it.
+		return
+	}
+
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	rs, ok := r.releases[owner.UID]
+	if !ok {
+		rs = &release{
+			namespace: meta.GetNamespace(),
+			name:      owner.Name,
+			uid:       owner.UID,
+			resources: map[types.UID]*resource{},
+		}
+	}
+	rs.resources[meta.GetUID()] = &resource{
+		gvk:       gvk,
+		namespace: meta.GetNamespace(),
+		name:      meta.GetName(),
+		uid:       meta.GetUID(),
+		object:    obj,
+	}
+	r.releases[owner.UID] = rs
 }
 
 func (r *releaseResources) remove(gvk schema.GroupVersionKind, obj runtime.Object) {
-	if accessor, ok := obj.(metav1.ObjectMetaAccessor); ok {
-		meta := accessor.GetObjectMeta()
-		owners := meta.GetOwnerReferences()
-		if len(owners) <= 0 || len(owners) >= 2 {
-			return
-		}
-		owner := owners[0]
-		if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
-			return
-		}
-		r.lock.Lock()
-		defer r.lock.Unlock()
-		rs, ok := r.releases[owner.UID]
-		if !ok {
-			return
-		}
-		delete(rs.resources, meta.GetUID())
-		if len(rs.resources) == 0 {
-			delete(r.releases, rs.uid)
-		}
+	accessor, ok := obj.(metav1.ObjectMetaAccessor)
+	if !ok {
+		return
+	}
+	meta := accessor.GetObjectMeta()
+	owners := meta.GetOwnerReferences()
+	if len(owners) <= 0 || len(owners) >= 2 {
+		return
+	}
+	owner := owners[0]
+	if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
+		return
+	}
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	rs, ok := r.releases[owner.UID]
+	if !ok {
+		return
+	}
+	delete(rs.resources, meta.GetUID())
+	if len(rs.resources) == 0 {
+		delete(r.releases, rs.uid)
 	}
 }
 
-// GarbageCollector collects garbage release histories
-// and corresponding resources.
+// GarbageCollector collects garbage release histories and corresponding resources.
 type GarbageCollector struct {
 	queue         workqueue.RateLimitingInterface
 	clients       kube.ClientPool
@@ -165,19 +172,14 @@ type GarbageCollector struct {
 	releaseLister cache.GenericLister
 	resources     *releaseResources
 	synced        []cache.InformerSynced
-	// ignored indicates which resources should be ignored
-	ignored []schema.GroupVersionKind
-	workers int32
-	working int32
+	ignored       []schema.GroupVersionKind // indicates which resources should be ignored
+	workers       int32
+	working       int32
 }
 
 // NewGarbageCollector creates a garbage collector.
-func NewGarbageCollector(
-	clients kube.ClientPool,
-	codec kube.Codec,
-	store store.IntegrationStore,
-	targets []schema.GroupVersionKind,
-	ignored []schema.GroupVersionKind,
+func NewGarbageCollector(clients kube.ClientPool, codec kube.Codec,
+	store store.IntegrationStore, targets, ignored []schema.GroupVersionKind,
 ) (*GarbageCollector, error) {
 	gc := &GarbageCollector{
 		clients:   clients,
@@ -185,7 +187,6 @@ func NewGarbageCollector(
 		store:     store,
 		resources: newReleaseResources(ignored),
 		queue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		synced:    []cache.InformerSynced{},
 		ignored:   ignored,
 	}
 	releaseInformer, err := store.InformerFor(gvkRelease)
@@ -200,7 +201,6 @@ func NewGarbageCollector(
 		}
 		if target == gvkRelease {
 			// Release
-
 			gi.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 				AddFunc: func(newObj interface{}) {
 					gc.enqueue(newObj)
@@ -219,7 +219,7 @@ func NewGarbageCollector(
 	return gc, nil
 }
 
-// resourceEventHandler is a handler implements cache.ResourceEventHandler.
+// resourceEventHandler is a handler implementing cache.ResourceEventHandler.
 type resourceEventHandler struct {
 	gvk       schema.GroupVersionKind
 	queue     workqueue.RateLimitingInterface
@@ -309,7 +309,7 @@ func (gc *GarbageCollector) resync() {
 	}
 }
 
-// worker only guarantee the real worker is alive.
+// worker only guarantees the real worker is alive.
 func (gc *GarbageCollector) worker() {
 	glog.V(3).Infof("Processing GarbageCollector resources")
 	for gc.processNextWorkItem() {
@@ -374,7 +374,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 		}
 	}
 
-	resources := gc.resources.resources(release)
+	resources := gc.resources.resources(release.UID)
 	for _, res := range resources {
 		switch {
 		case res.gvk == gvkReleaseHistory:
@@ -517,27 +517,3 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 //         return
 //     }
 // }
-
-// ignore checks if an object should be ignored.
-func (gc *GarbageCollector) ignore(gvk schema.GroupVersionKind) bool {
-	if gvk == gvkRelease {
-		// Ignore releases
-		// We don't need handle release type
-		return true
-	}
-	for _, i := range gc.ignored {
-		if i == gvk {
-			return true
-		}
-	}
-	return false
-}
-
-// isAvailable checks if release is available.
-func (gc *GarbageCollector) isAvailable(release *releaseapi.Release) bool {
-	if release == nil {
-		return false
-	}
-	conditionsLen := len(release.Status.Conditions)
-	return conditionsLen > 0 && release.Status.Conditions[conditionsLen-1].Type == releaseapi.ReleaseAvailable
-}
