@@ -137,9 +137,8 @@ func (gk GroupKind) String() string {
 	return gk.Kind + "." + gk.Group
 }
 
-// GroupVersionKind unambiguously identifies a kind.
-// It doesn't anonymously include GroupVersion to avoid automatic coercion.
-// It doesn't use a GroupVersion to avoid custom marshalling
+// GroupVersionKind unambiguously identifies a kind.  It doesn't anonymously include GroupVersion
+// to avoid automatic coercion.  It doesn't use a GroupVersion to avoid custom marshalling
 type GroupVersionKind struct {
 	Group   string
 	Version string
@@ -171,7 +170,7 @@ type GroupVersion struct {
 
 // Empty returns true if group and version are empty
 func (gv GroupVersion) Empty() bool {
-	return gv.Group == "" && gv.Version == ""
+	return len(gv.Group) == 0 && len(gv.Version) == 0
 }
 
 // String puts "group" and "version" into a single "group/version" string. For the legacy v1
@@ -181,11 +180,12 @@ func (gv GroupVersion) String() string {
 	if gv.Empty() {
 		return ""
 	}
+
 	// special case of "v1" for backward compatibility
-	if gv.Group == "" && gv.Version == "v1" {
+	if len(gv.Group) == 0 && gv.Version == "v1" {
 		return gv.Version
 	}
-	if gv.Group != "" {
+	if len(gv.Group) > 0 {
 		return gv.Group + "/" + gv.Version
 	}
 	return gv.Version
