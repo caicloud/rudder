@@ -352,12 +352,6 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	// the manifest should not be empty. If the manifest be empty, release may not be latest,
-	// ignore this performing.
-	if release.Status.Manifest == "" {
-		glog.Warning("release(%s/%s)'s manifest is empty, ignore", release.Namespace, release.Name)
-		return nil
-	}
 	desired := map[string]bool{}
 	releaseAlived := false
 	if err == nil {
@@ -367,6 +361,12 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 		}
 		if release.UID == current.GetUID() {
 			release = rel.(*releaseapi.Release)
+			// the manifest should not be empty. If the manifest be empty, release may not be latest,
+			// ignore this performing.
+			if release.Status.Manifest == "" {
+				glog.Warning("release(%s/%s)'s manifest is empty, ignore", release.Namespace, release.Name)
+				return nil
+			}
 			resources := render.SplitManifest(release.Status.Manifest)
 			objs, accessors, err := gc.codec.AccessorsForResources(resources)
 			if err != nil {
