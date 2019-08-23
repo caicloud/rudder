@@ -23,21 +23,23 @@ type NodeLocalStorage struct {
 // NodeLocalStorageSpec describes the information that needs to create a VG.
 type NodeLocalStorageSpec struct {
 	// related StorageClass name
-	StorageClass string
+	StorageClass string `json:"storageClass"`
 	// related Node name
-	Node string
+	Node string `json:"node"`
 	// chosen disks
-	Disks []string
+	Disks []string `json:"disks"`
 }
 
 // NodeLocalStorageStatus describes the capacity information of the VG.
 type NodeLocalStorageStatus struct {
 	// the name of the VG created based on the disks above
-	VG string
+	VG string `json:"vg,omitempty"`
+	// create VG error message
+	Error string `json:"error,omitempty"`
 	// total capacity of VG
-	Total int64
+	Total int64 `json:"total,omitempty"`
 	// remaining(unallocated) capacity of VG
-	Free int64
+	Free int64 `json:"free,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

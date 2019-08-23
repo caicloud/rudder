@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	informerrelease "github.com/caicloud/clientset/informers/release/v1alpha1"
 	"github.com/caicloud/clientset/kubernetes"
@@ -52,6 +53,7 @@ func NewStatusController(
 	releaseInformer informerrelease.ReleaseInformer,
 	childResources []schema.GroupVersionKind,
 	resources kube.APIResources,
+	resyncPeriod int32,
 ) (*StatusController, error) {
 	factory := store.SharedInformerFactory()
 	extraResources := []schema.GroupVersionKind{
@@ -72,14 +74,15 @@ func NewStatusController(
 
 	sc.workqueue = syncqueue.NewSyncQueue(&releaseapi.Release{}, sc.syncRelease)
 	// init release event handler
-	releaseInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	releaseInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sc.workqueue.Enqueue(obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldRelease := oldObj.(*releaseapi.Release)
 			newRelease := newObj.(*releaseapi.Release)
-			if reflect.DeepEqual(oldRelease.Spec, newRelease.Spec) {
+			if reflect.DeepEqual(oldRelease.Spec, newRelease.Spec) &&
+				normalDetails(oldRelease.Status.Details) {
 				return
 			}
 			sc.workqueue.Enqueue(newObj)
@@ -87,7 +90,7 @@ func NewStatusController(
 		DeleteFunc: func(obj interface{}) {
 			sc.workqueue.Enqueue(obj)
 		},
-	})
+	}, time.Duration(resyncPeriod)*time.Second)
 	// init subresources event handler
 	for _, gvk := range childResources {
 		resource, err := resources.ResourceFor(gvk)
@@ -146,6 +149,16 @@ func NewStatusController(
 		factory.Core().V1().Pods().Informer().HasSynced,
 	)
 	return sc, nil
+}
+
+// normalDetails checks if all details are in normal status
+func normalDetails(details map[string]releaseapi.ReleaseDetailStatus) bool {
+	for _, detail := range details {
+		if detail.Reason != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func (sc *StatusController) enqueueChildresource(obj interface{}) {
