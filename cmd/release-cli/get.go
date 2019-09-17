@@ -107,7 +107,7 @@ func runGet(cmd *cobra.Command, args []string) {
 		encoder := base64.NewEncoder(base64.StdEncoding, buf)
 		_, err := encoder.Write(r.Spec.Template)
 		if err != nil {
-			fmt.Println("")
+			fmt.Println("encoder write error:", err)
 			return
 		}
 		fmt.Println(buf.String())
