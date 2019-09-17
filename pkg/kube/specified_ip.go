@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 )
 
@@ -50,8 +49,7 @@ func judgeIPSpecDecreasing(target, existence runtime.Object) (bool, error) {
 // applyIpSpecDecreasing deals with release ip spec decreasing extra operations
 // 1. update deployment/statefulset annotations
 // 2. delete pods not in new list
-func (c *client) applyIpSpecDecreasing(client *ResourceClient,
-	gvk schema.GroupVersionKind, namespace string, obj, existence runtime.Object) error {
+func (c *client) applyIPSpecDecreasing(client *ResourceClient, namespace string, obj, existence runtime.Object) error {
 	// parse and check ips
 	targetAnnoValue, _ := getRuntimeObjectAnnotationValue(obj, AnnoKeySpecifiedIPs)
 	ipSets, err := parseSpecifiedIPSetsFromString(targetAnnoValue)

@@ -243,7 +243,7 @@ func (rs *releaseStorage) Rollback(version int32) (*releaseapi.Release, error) {
 	// FIX: use temporary render to avoid concurrent issue
 	// need render again instead of using history's manifest directly because of the history's manifest
 	// remained suspend status when be generated.
-	carrier, err := render.NewRender().Render(&render.RenderOptions{
+	carrier, err := render.NewRender().Render(&render.Options{
 		Namespace: rs.release.Namespace,
 		Release:   rs.release.Name,
 		Version:   history.Spec.Version,

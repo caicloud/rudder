@@ -181,12 +181,12 @@ func (c *client) Apply(namespace string, resources []string, options ApplyOption
 				}
 				// Deployment/StatefulSet ip list decrease
 				if gvk.Kind == "Deployment" || gvk.Kind == "StatefulSet" {
-					isIpDecreasing, err := judgeIPSpecDecreasing(obj, existence)
+					isIPDecreasing, err := judgeIPSpecDecreasing(obj, existence)
 					if err != nil {
 						return err
 					}
-					if isIpDecreasing {
-						err = c.applyIpSpecDecreasing(client, gvk, namespace, obj, existence)
+					if isIPDecreasing {
+						err = c.applyIPSpecDecreasing(client, namespace, obj, existence)
 						if err != nil {
 							return err
 						}
@@ -263,14 +263,16 @@ func (c *client) applyJob(client *ResourceClient, gvk schema.GroupVersionKind, o
 }
 
 func jobEqual(desired, current *batchv1.Job) (bool, error) {
-
-	setDefaultJob(desired)
+	err := setDefaultJob(desired)
+	if err != nil {
+		return false, err
+	}
 
 	currentSpec := current.Spec
 	destSpec := currentSpec.DeepCopy()
 
 	// apply desired spec to dest
-	err := mergo.Merge(destSpec, desired.Spec, mergo.WithOverride)
+	err = mergo.Merge(destSpec, desired.Spec, mergo.WithOverride)
 	if err != nil {
 		glog.Errorf("merge job spec error: %v", err)
 		return false, err
@@ -289,17 +291,20 @@ func jobEqual(desired, current *batchv1.Job) (bool, error) {
 }
 
 // TODO: the feature in utilfeature.DefaultFeatureGate must be the same as apiserver
-func setDefaultJob(job *batchv1.Job) {
+func setDefaultJob(job *batchv1.Job) error {
 	// set default in job spec and pod template
 	k8sbatchv1.SetObjectDefaults_Job(job)
 
 	in := job.Spec.Template.Spec
 	out := k8score.Pod{}
 
-	legacyscheme.Scheme.Convert(&in, &out.Spec, nil)
+	err := legacyscheme.Scheme.Convert(&in, &out.Spec, nil)
+	if err != nil {
+		return err
+	}
 	// drop disabled alpha fields in podSpec
 	k8spodutil.DropDisabledPodFields(&out, nil)
-	legacyscheme.Scheme.Convert(&out.Spec, &job.Spec.Template.Spec, nil)
+	return legacyscheme.Scheme.Convert(&out.Spec, &job.Spec.Template.Spec, nil)
 }
 
 // Create creates all these resources.

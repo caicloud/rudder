@@ -153,9 +153,8 @@ func validateSpecifiedIPsSets(sets []WorkloadSubnetSpecifiedIPs) error {
 			// duplicate
 			if _, exist := ipMap[ip]; exist {
 				return fmt.Errorf("duplicate ip %v", ip)
-			} else {
-				ipMap[ip] = struct{}{}
 			}
+			ipMap[ip] = struct{}{}
 		}
 	}
 	return nil

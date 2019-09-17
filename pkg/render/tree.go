@@ -27,7 +27,7 @@ func CarrierForResources(resources []string) (Carrier, error) {
 			return nil, err
 		}
 		if res.Metadata.Annotations == nil {
-			return nil, fmt.Errorf("unknwon resource object")
+			return nil, fmt.Errorf("unknown resource object")
 		}
 		path, ok := res.Metadata.Annotations[string(releaseutil.DefaultPathKey)]
 		if !ok || path == "" {
