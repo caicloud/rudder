@@ -6,7 +6,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func (sc *StatusController) enqueueAccessor(obj interface{}) {
+func (sc *Controller) enqueueAccessor(obj interface{}) {
 	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 	if ok {
 		obj = tombstone.Obj
@@ -34,7 +34,7 @@ func (sc *StatusController) enqueueAccessor(obj interface{}) {
 	sc.workqueue.Enqueue(cache.ExplicitKey(namepsace + "/" + releaseName))
 }
 
-func (sc *StatusController) enqueueEvent(obj interface{}) {
+func (sc *Controller) enqueueEvent(obj interface{}) {
 	event, ok := obj.(*corev1.Event)
 	if !ok {
 		return

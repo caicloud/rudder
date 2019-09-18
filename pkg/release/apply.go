@@ -1,7 +1,6 @@
 package release
 
 import (
-	"fmt"
 	"reflect"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
@@ -9,7 +8,6 @@ import (
 	"github.com/caicloud/rudder/pkg/render"
 	"github.com/caicloud/rudder/pkg/storage"
 	"github.com/golang/glog"
-	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -56,7 +54,6 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		}
 
 		if len(histories) == 0 {
-			correctedVersion = 1
 			nextVersion = 1
 		} else {
 			var currentHistory *releaseapi.ReleaseHistory
@@ -96,7 +93,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		// check the manifests
 
 		// FIX: use temporary render to avoid concurrent issue
-		carrier, err := render.NewRender().Render(&render.RenderOptions{
+		carrier, err := render.NewRender().Render(&render.Options{
 			Namespace: release.Namespace,
 			Release:   release.Name,
 			Version:   release.Status.Version,
@@ -148,33 +145,33 @@ func (rc *releaseContext) ignore(obj runtime.Object) bool {
 }
 
 // fix modifies new object.
-func (rc *releaseContext) fix(origin, new, current runtime.Object) error {
-	switch origin.GetObjectKind().GroupVersionKind() {
-	case core.SchemeGroupVersion.WithKind("Service"):
-		// Fix service when convert NodePort to ClusterIP.
-		o, ok := origin.(*core.Service)
-		if !ok {
-			return fmt.Errorf("can't convert origin object %v to service", origin.GetObjectKind())
-		}
-		n, ok := new.(*core.Service)
-		if !ok {
-			return fmt.Errorf("can't convert new object %v to service", new.GetObjectKind())
-		}
-		c, ok := current.(*core.Service)
-		if !ok {
-			return fmt.Errorf("can't convert current object %v to service", current.GetObjectKind())
-		}
-		if o.Spec.Type == core.ServiceTypeNodePort && n.Spec.Type == core.ServiceTypeClusterIP {
-			// Set NodePort for origin object
-			for i := 0; i < len(o.Spec.Ports) && i < len(c.Spec.Ports); i++ {
-				o.Spec.Ports[i].NodePort = c.Spec.Ports[i].NodePort
-			}
-			// Clear NodePort for new object
-			ports := n.Spec.Ports
-			for i := range ports {
-				ports[i].NodePort = 0
-			}
-		}
-	}
-	return nil
-}
+//func (rc *releaseContext) fix(origin, new, current runtime.Object) error {
+//	switch origin.GetObjectKind().GroupVersionKind() {
+//	case core.SchemeGroupVersion.WithKind("Service"):
+//		// Fix service when convert NodePort to ClusterIP.
+//		o, ok := origin.(*core.Service)
+//		if !ok {
+//			return fmt.Errorf("can't convert origin object %v to service", origin.GetObjectKind())
+//		}
+//		n, ok := new.(*core.Service)
+//		if !ok {
+//			return fmt.Errorf("can't convert new object %v to service", new.GetObjectKind())
+//		}
+//		c, ok := current.(*core.Service)
+//		if !ok {
+//			return fmt.Errorf("can't convert current object %v to service", current.GetObjectKind())
+//		}
+//		if o.Spec.Type == core.ServiceTypeNodePort && n.Spec.Type == core.ServiceTypeClusterIP {
+//			// Set NodePort for origin object
+//			for i := 0; i < len(o.Spec.Ports) && i < len(c.Spec.Ports); i++ {
+//				o.Spec.Ports[i].NodePort = c.Spec.Ports[i].NodePort
+//			}
+//			// Clear NodePort for new object
+//			ports := n.Spec.Ports
+//			for i := range ports {
+//				ports[i].NodePort = 0
+//			}
+//		}
+//	}
+//	return nil
+//}

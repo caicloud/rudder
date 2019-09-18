@@ -134,8 +134,8 @@ func (c *cacheObject) GetObjectKind() schema.ObjectKind {
 	return c.object.GetObjectKind()
 }
 
-func (in *cacheObject) DeepCopyObject() runtime.Object {
-	return in.object.DeepCopyObject()
+func (c *cacheObject) DeepCopyObject() runtime.Object {
+	return c.object.DeepCopyObject()
 }
 
 func (c *cacheObject) Expired() bool {
@@ -144,7 +144,6 @@ func (c *cacheObject) Expired() bool {
 
 // cacheLayer caches objects by a temporary store.
 type cacheLayer struct {
-	lock        sync.RWMutex
 	gr          schema.GroupResource
 	indexer     cache.Indexer
 	indexLister cache.GenericLister
@@ -214,12 +213,12 @@ func (c *cacheLayer) add(obj runtime.Object, existing bool) {
 		object:            obj,
 		deadline:          time.Now().Add(c.ttl),
 	}
-	c.indexer.Add(co)
+	_ = c.indexer.Add(co)
 }
 
 func (c *cacheLayer) remove(obj runtime.Object) {
 	if co, ok := c.get(obj); ok {
-		c.indexer.Delete(co)
+		_ = c.indexer.Delete(co)
 	}
 }
 

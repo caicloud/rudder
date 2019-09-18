@@ -25,11 +25,11 @@ func NewControllerInitializers(availableControllers []string) (map[string]InitFu
 
 	result := make(map[string]InitFunc)
 	for _, name := range availableControllers {
-		if initFunc, ok := allControllers[name]; !ok {
+		initFunc, ok := allControllers[name]
+		if !ok {
 			return nil, fmt.Errorf("there is no controller named: %s", name)
-		} else {
-			result[name] = initFunc
 		}
+		result[name] = initFunc
 	}
 	return result, nil
 }

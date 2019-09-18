@@ -17,9 +17,9 @@ func main() {
 	root.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	f := root.PersistentFlags().Lookup("logtostderr")
 	f.DefValue = "true"
-	f.Value.Set(f.DefValue)
+	_ = f.Value.Set(f.DefValue)
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	fs.Parse([]string{})
+	_ = fs.Parse([]string{})
 	flag.CommandLine = fs
 	if err := root.Execute(); err != nil {
 		glog.Fatalln(err)

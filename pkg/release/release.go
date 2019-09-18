@@ -24,8 +24,8 @@ type Getter interface {
 // If ctx was canceled, Handler should clean all resources created by the handler.
 type Handler func(ctx context.Context, storage storage.ReleaseStorage, getter Getter)
 
-// ReleaseManager manages the behavior of releases.
-type ReleaseManager interface {
+// Manager manages the behavior of releases.
+type Manager interface {
 	// Run runs manager. It does nothing when manager is running.
 	Run() error
 	// Trigger submits a release to manager. Manager decides the next step
@@ -36,7 +36,7 @@ type ReleaseManager interface {
 }
 
 // NewReleaseManager creates a release manager
-func NewReleaseManager(backend storage.ReleaseBackend, handler Handler) ReleaseManager {
+func NewReleaseManager(backend storage.ReleaseBackend, handler Handler) Manager {
 	return &releaseManager{
 		backend:  backend,
 		handler:  handler,

@@ -105,7 +105,11 @@ func runGet(cmd *cobra.Command, args []string) {
 		fmt.Println("Template:")
 		buf := bytes.NewBuffer(nil)
 		encoder := base64.NewEncoder(base64.StdEncoding, buf)
-		encoder.Write(r.Spec.Template)
+		_, err := encoder.Write(r.Spec.Template)
+		if err != nil {
+			fmt.Println("encoder write error:", err)
+			return
+		}
 		fmt.Println(buf.String())
 
 		fmt.Println("Manifest:")
