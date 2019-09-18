@@ -66,7 +66,7 @@ func NewAPIResourcesByConfig(config *rest.Config) (APIResources, error) {
 
 // NewAPIResources creates APIResources by kube client.
 func NewAPIResources(client kubernetes.Interface) (APIResources, error) {
-	resources, err := client.Discovery().ServerResources()
+	_, resources, err := client.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		return nil, err
 	}

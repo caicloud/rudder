@@ -19,10 +19,10 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// ReleaseController watches all resource related release and release history.
-type ReleaseController struct {
+// Controller watches all resource related release and release history.
+type Controller struct {
 	queue            workqueue.RateLimitingInterface
-	manager          release.ReleaseManager
+	manager          release.Manager
 	releaseLister    listerrelease.ReleaseLister
 	releaseHasSynced cache.InformerSynced
 }
@@ -35,14 +35,14 @@ func NewReleaseController(
 	releaseClient releasev1alpha1.ReleaseV1alpha1Interface,
 	releaseInformer informerrelease.ReleaseInformer,
 	ignored []schema.GroupVersionKind,
-) (*ReleaseController, error) {
+) (*Controller, error) {
 	client, err := kube.NewClientWithCacheLayer(clients, codec, store)
 	if err != nil {
 		return nil, err
 	}
 	handler := release.NewReleaseHandler(client, ignored)
 	backend := storage.NewReleaseBackendWithCacheLayer(releaseClient, store)
-	rc := &ReleaseController{
+	rc := &Controller{
 		queue:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		manager:          release.NewReleaseManager(backend, handler),
 		releaseLister:    releaseInformer.Lister(),
@@ -59,12 +59,12 @@ func NewReleaseController(
 }
 
 // keyForObj returns the key of obj.
-func (rc *ReleaseController) keyForObj(obj interface{}) (string, error) {
+func (rc *Controller) keyForObj(obj interface{}) (string, error) {
 	return cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 }
 
 // enqueueRelease enqueues the key of obj.
-func (rc *ReleaseController) enqueueRelease(obj interface{}) {
+func (rc *Controller) enqueueRelease(obj interface{}) {
 	key, err := rc.keyForObj(obj)
 	if err != nil {
 		glog.Errorf("Can't get obj key: %v", err)
@@ -77,7 +77,7 @@ func (rc *ReleaseController) enqueueRelease(obj interface{}) {
 }
 
 // Run starts controller and checks releases
-func (rc *ReleaseController) Run(stopCh <-chan struct{}) {
+func (rc *Controller) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	glog.Info("Running ReleaseController")
 
@@ -96,7 +96,7 @@ func (rc *ReleaseController) Run(stopCh <-chan struct{}) {
 // worker checks improper resources. If controller unexpectedly terminated,
 // some resources may not delete completely. worker should detect those
 // resources and let them in a correct posture.
-func (rc *ReleaseController) worker() {
+func (rc *Controller) worker() {
 	if err := rc.manager.Run(); err != nil {
 		glog.Errorf("Can't run manager: %v", err)
 	}
@@ -106,7 +106,7 @@ func (rc *ReleaseController) worker() {
 }
 
 // processNextWorkItem processes next release
-func (rc *ReleaseController) processNextWorkItem() bool {
+func (rc *Controller) processNextWorkItem() bool {
 	key, quit := rc.queue.Get()
 	if quit {
 		glog.Error("Unexpected quit of release queue")

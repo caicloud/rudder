@@ -18,8 +18,8 @@ import (
 	"k8s.io/helm/pkg/timeconv"
 )
 
-// RenderOptions is used to render template.
-type RenderOptions struct {
+// Options is used to render template.
+type Options struct {
 	// Namespace for resources.
 	Namespace string
 	// Release is the name of release.
@@ -37,7 +37,7 @@ type RenderOptions struct {
 // Render renders template and config to resources.
 type Render interface {
 	// Render renders template and return a resources carrier.
-	Render(options *RenderOptions) (Carrier, error)
+	Render(options *Options) (Carrier, error)
 }
 
 // NewRender creates a template render.
@@ -52,7 +52,7 @@ type render struct {
 }
 
 // Render renders release and return a resources carrier.
-func (r *render) Render(options *RenderOptions) (Carrier, error) {
+func (r *render) Render(options *Options) (Carrier, error) {
 	chart, err := chartutil.LoadArchive(bytes.NewReader(options.Template))
 	if err != nil {
 		return nil, err
@@ -139,14 +139,15 @@ func (r *render) isHook(resource string) (bool, error) {
 	return ok, nil
 }
 
-func (r *render) renderConfig(options *RenderOptions) (string, error) {
+func (r *render) renderConfig(options *Options) (string, error) {
 	if options.Suspend == nil || (options.Suspend != nil && !*options.Suspend) {
 		return options.Config, nil
 	}
 
+	var err error
 	confBytes := []byte(options.Config)
 	count := 0
-	cb := func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	cb := func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		defer func() { count++ }()
 		var typ string
 		typ, err = jsonparser.GetString(value, "type")
@@ -169,9 +170,8 @@ func (r *render) renderConfig(options *RenderOptions) (string, error) {
 		default:
 			err = fmt.Errorf("illegal controller type: %s", typ)
 		}
-		return
 	}
-	_, err := jsonparser.ArrayEach(confBytes, cb, "_config", "controllers")
+	_, err = jsonparser.ArrayEach(confBytes, cb, "_config", "controllers")
 	if err != nil {
 		glog.Errorf("render release: %s suspend flag error: %v", options.Release, err)
 		glog.Errorf("release: %s 's config: %s", options.Release, options.Config)

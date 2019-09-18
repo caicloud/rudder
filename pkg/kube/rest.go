@@ -157,12 +157,12 @@ func (rc *ResourceClient) Create(obj runtime.Object) (runtime.Object, error) {
 
 // Update updates the provided resource.
 func (rc *ResourceClient) Update(obj runtime.Object) (runtime.Object, error) {
-	name := ""
-	if accessor, ok := obj.(metav1.ObjectMetaAccessor); !ok {
+	accessor, ok := obj.(metav1.ObjectMetaAccessor)
+	if !ok {
 		return obj, fmt.Errorf("unrecognized object")
-	} else {
-		name = accessor.GetObjectMeta().GetName()
 	}
+	name := accessor.GetObjectMeta().GetName()
+
 	if len(name) == 0 {
 		return obj, fmt.Errorf("object missing name")
 	}

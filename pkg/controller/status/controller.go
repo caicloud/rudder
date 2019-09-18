@@ -31,9 +31,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// StatusController listens all releases and all generated resources.
+// Controller listens all releases and all generated resources.
 // It syncs resources status to normal releases.
-type StatusController struct {
+type Controller struct {
 	codec         kube.Codec
 	backend       storage.ReleaseBackend
 	workqueue     *syncqueue.SyncQueue
@@ -54,14 +54,14 @@ func NewStatusController(
 	childResources []schema.GroupVersionKind,
 	resources kube.APIResources,
 	resyncPeriod time.Duration,
-) (*StatusController, error) {
+) (*Controller, error) {
 	factory := store.SharedInformerFactory()
 	extraResources := []schema.GroupVersionKind{
 		appsv1.SchemeGroupVersion.WithKind("ReplicaSet"),
 		appsv1.SchemeGroupVersion.WithKind("ControllerRevision"),
 	}
 
-	sc := &StatusController{
+	sc := &Controller{
 		codec:         codec,
 		backend:       storage.NewReleaseBackend(releaseClient),
 		store:         store,
@@ -161,7 +161,7 @@ func normalDetails(details map[string]releaseapi.ReleaseDetailStatus) bool {
 	return true
 }
 
-func (sc *StatusController) enqueueChildresource(obj interface{}) {
+func (sc *Controller) enqueueChildresource(obj interface{}) {
 	// deal with DeletedFinalStateUnknown
 	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 	if ok {
@@ -211,7 +211,7 @@ func (sc *StatusController) enqueueChildresource(obj interface{}) {
 }
 
 // Run starts controller and checks releases
-func (sc *StatusController) Run(workers int32, stopCh <-chan struct{}) {
+func (sc *Controller) Run(workers int32, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	glog.Info("Running StatusController")
 
@@ -228,7 +228,7 @@ func (sc *StatusController) Run(workers int32, stopCh <-chan struct{}) {
 	glog.Info("Shutting down StatusController")
 }
 
-func (sc *StatusController) syncRelease(obj interface{}) error {
+func (sc *Controller) syncRelease(obj interface{}) error {
 	key := obj.(string)
 	namespace, name, _ := cache.SplitMetaNamespaceKey(key)
 	release, err := sc.releaseLister.Releases(namespace).Get(name)
@@ -284,10 +284,10 @@ func (sc *StatusController) syncRelease(obj interface{}) error {
 		release.Status.PodStatistics = *podStatistics
 	})
 
-	return nil
+	return err
 }
 
-func (sc *StatusController) detect(release *releaseapi.Release) (map[string]releaseapi.ReleaseDetailStatus, *releaseapi.PodStatistics, error) {
+func (sc *Controller) detect(release *releaseapi.Release) (map[string]releaseapi.ReleaseDetailStatus, *releaseapi.PodStatistics, error) {
 	if release.Status.Manifest == "" {
 		// No resource
 		return map[string]releaseapi.ReleaseDetailStatus{}, nil, nil

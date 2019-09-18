@@ -58,7 +58,7 @@ func runList(cmd *cobra.Command, args []string) {
 			}
 
 		}
-		counter := make(v1alpha1.ResourceCounter, 0)
+		counter := make(v1alpha1.ResourceCounter)
 		for _, v := range r.Status.Details {
 			for _, c := range v.Resources {
 				for k, n := range c {
