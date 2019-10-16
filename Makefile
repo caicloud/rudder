@@ -123,9 +123,9 @@ build-linux:
       	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
       	        -ldflags "-s -w -X $(ROOT)/pkg/version.version=$(VERSION)                  \
       	          -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)                            \
-                  -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                            \
-                  -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                      \
-                  -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"                           \
+      	          -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                            \
+      	          -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                      \
+      	          -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"                           \
       	        $(CMD_DIR)/$${target};                                                     \
 	    	done'
 
