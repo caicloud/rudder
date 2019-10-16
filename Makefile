@@ -101,9 +101,8 @@ test:
 
 build-local:
 	@for target in $(TARGETS); do                                                      \
-	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                  \
+	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                            \
 	  -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)                        \
-	    -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)                                        \
 	    -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)								   \
 	    -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT) 								   \
 	    -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE) 						   \
@@ -123,7 +122,6 @@ build-linux:
       	    /bin/bash -c 'for target in $(TARGETS); do                                     \
       	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
       	        -ldflags "-s -w -X $(ROOT)/pkg/version.version=$(VERSION)                  \
-      	          -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)                                  \
       	          -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)                            \
                   -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                            \
                   -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                      \
