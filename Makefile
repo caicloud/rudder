@@ -49,7 +49,8 @@ BASE_REGISTRY ?= cargo.caicloud.xyz/library
 #
 
 # It's necessary to set this because some environments don't link sh -> bash.
-SHELL := /bin/bash
+export SHELL     := /bin/bash
+export SHELLOPTS := errexit
 
 # Project main package location (can be multiple ones).
 CMD_DIR := ./cmd
@@ -66,9 +67,10 @@ GITREMOTE    ?= $(shell git remote get-url origin)
 GITCOMMIT    ?= $(shell git rev-parse HEAD)
 GITTREESTATE ?= $(if $(shell git status --porcelain),dirty,clean)
 BUILDDATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GOCOMMON     := $(ROOT)/vendor/github.com/caicloud/go-common
 
 # Available cpus for compiling, please refer to https://github.com/caicloud/engineering/issues/8186#issuecomment-518656946 for more information.
-CPUS ?= $(shell sh hack/read_cpus_available.sh)
+CPUS ?= $(shell /bin/bash hack/read_cpus_available.sh)
 
 # Track code version with Docker Label.
 DOCKER_LABELS ?= git-describe="$(shell date -u +v%Y%m%d)-$(shell git describe --tags --always --dirty)"
@@ -100,34 +102,33 @@ test:
 
 build-local:
 	@for target in $(TARGETS); do                                                      \
-	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                  \
-	  -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)                        \
-	    -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)                                        \
-	    -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)								   \
-	    -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT) 								   \
-	    -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE) 						   \
-	    -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"								   \
+	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                            \
+	  -ldflags "-s -w -X $(GOCOMMON)/version.VERSION=$(VERSION)                        \
+	    -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                                  \
+	    -X $(GOCOMMON)/version.gitCommit=$(GITCOMMIT)                                  \
+	    -X $(GOCOMMON)/version.gitTreeState=$(GITTREESTATE)                            \
+	    -X $(GOCOMMON)/version.buildDate=$(BUILDDATE)"                                 \
 	  $(CMD_DIR)/$${target};                                                           \
 	done
 
 build-linux:
-	  	@docker run --rm                                                                   \
-      	  -v $(PWD):/go/src/$(ROOT)                                                        \
-      	  -w /go/src/$(ROOT)                                                               \
-      	  -e GOOS=linux                                                                    \
-      	  -e GOARCH=amd64                                                                  \
-      	  -e GOPATH=/go                                                                    \
-      	  $(BASE_REGISTRY)/golang:1.12.9-stretch                                           \
-      	    /bin/bash -c 'for target in $(TARGETS); do                                     \
-      	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
-      	        -ldflags "-s -w -X $(ROOT)/pkg/version.version=$(VERSION)                  \
-      	          -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)                                  \
-      	          -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)                            \
-                  -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                            \
-                  -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                      \
-                  -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"                           \
-      	        $(CMD_DIR)/$${target};                                                     \
-	    	done'
+	@docker run --rm -t                                                                \
+	  -v $(PWD):/go/src/$(ROOT)                                                        \
+	  -w /go/src/$(ROOT)                                                               \
+	  -e GOOS=linux                                                                    \
+	  -e GOARCH=amd64                                                                  \
+	  -e GOPATH=/go                                                                    \
+	  -e SHELLOPTS=$(SHELLOPTS)                                                        \
+	  $(BASE_REGISTRY)/golang:1.12.9-stretch                                           \
+	    /bin/bash -c 'for target in $(TARGETS); do                                     \
+	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
+	        -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                  \
+	          -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                            \
+	          -X $(GOCOMMON)/version.gitCommit=$(GITCOMMIT)                            \
+	          -X $(GOCOMMON)/version.gitTreeState=$(GITTREESTATE)                      \
+	          -X $(GOCOMMON)/version.buildDate=$(BUILDDATE)"                           \
+	        $(CMD_DIR)/$${target};                                                     \
+	  done'
 
 container: build-linux
 	@for target in $(TARGETS); do                                                      \

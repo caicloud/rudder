@@ -6,13 +6,13 @@ import (
 	"github.com/caicloud/rudder/cmd/controller/app/options"
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/store"
-	"github.com/caicloud/rudder/pkg/version"
 
 	"github.com/caicloud/clientset/informers"
 	"github.com/caicloud/clientset/kubernetes"
 	"github.com/caicloud/clientset/kubernetes/scheme"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/go-common/kubernetes/client"
+	"github.com/caicloud/go-common/version"
 
 	"github.com/golang/glog"
 	apps "k8s.io/api/apps/v1"

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )

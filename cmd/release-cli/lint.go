@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/caicloud/rudder/pkg/render"
+
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"

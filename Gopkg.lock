@@ -220,15 +220,16 @@
   revision = "f044571b72093f97ddeaeaacb19b1aba8264bfe3"
 
 [[projects]]
-  digest = "1:d4d3258255decd4bd8429f9269b8d640b5608ff0ea495f662536757d96504da9"
+  branch = "release-0.1"
+  digest = "1:2944e836a9d370f015fd7fc04f4bbc1aaffd5c1b97ef9bffda501f654122aa97"
   name = "github.com/caicloud/go-common"
   packages = [
     "interfaces",
     "kubernetes/client",
+    "version",
   ]
   pruneopts = "UT"
-  revision = "6bfe9e81c7904fa05c4ca04082830445ed48108b"
-  version = "v0.1.9"
+  revision = "b1089d926236335a601ce6d76d6cb3e5faa245a9"
 
 [[projects]]
   branch = "master"
@@ -996,6 +997,7 @@
     "github.com/caicloud/clientset/util/syncqueue",
     "github.com/caicloud/go-common/interfaces",
     "github.com/caicloud/go-common/kubernetes/client",
+    "github.com/caicloud/go-common/version",
     "github.com/caicloud/rudder-client/status",
     "github.com/caicloud/rudder-client/status/universal",
     "github.com/evanphx/json-patch",
