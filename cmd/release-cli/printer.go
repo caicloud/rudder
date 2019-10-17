@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func printTable(table [][]string) {
-	widths := []int{}
+	var widths []int
 	for _, row := range table {
 		for i, col := range row {
 			if i >= len(widths) {

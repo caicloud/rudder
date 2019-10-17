@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/caicloud/clientset/kubernetes"
+
 	"github.com/ghodss/yaml"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

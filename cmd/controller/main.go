@@ -6,6 +6,7 @@ import (
 
 	"github.com/caicloud/rudder/cmd/controller/app"
 	"github.com/caicloud/rudder/cmd/controller/app/options"
+
 	"github.com/spf13/pflag"
 )
 
