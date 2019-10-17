@@ -103,29 +103,29 @@ build-local:
 	@for target in $(TARGETS); do                                                      \
 	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                            \
 	  -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)                        \
-	    -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)								   \
-	    -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT) 								   \
-	    -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE) 						   \
-	    -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"								   \
+	    -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)                                  \
+	    -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                                  \
+	    -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                            \
+	    -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"                                 \
 	  $(CMD_DIR)/$${target};                                                           \
 	done
 
 build-linux:
 	@docker run --rm -t                                                                \
 	  -v $(PWD):/go/src/$(ROOT)                                                        \
-      -w /go/src/$(ROOT)                                                               \
-      -e GOOS=linux                                                                    \
-      -e GOARCH=amd64                                                                  \
-      -e GOPATH=/go                                                                    \
-      -e SHELLOPTS=$(SHELLOPTS)                                                        \
-      $(BASE_REGISTRY)/golang:1.12.9-stretch                                           \
-        /bin/bash -c 'for target in $(TARGETS); do                                     \
-      	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
-      	    -ldflags "-s -w -X $(ROOT)/pkg/version.version=$(VERSION)                  \
-      	      -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)                            \
-      	      -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                            \
-      	      -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                      \
-      	      -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"                           \
+	  -w /go/src/$(ROOT)                                                               \
+	  -e GOOS=linux                                                                    \
+	  -e GOARCH=amd64                                                                  \
+	  -e GOPATH=/go                                                                    \
+	  -e SHELLOPTS=$(SHELLOPTS)                                                        \
+	  $(BASE_REGISTRY)/golang:1.12.9-stretch                                           \
+	    /bin/bash -c 'for target in $(TARGETS); do                                     \
+	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
+	        -ldflags "-s -w -X $(ROOT)/pkg/version.version=$(VERSION)                  \
+	          -X $(ROOT)/pkg/version.gitRemote=$(GITREMOTE)                            \
+	          -X $(ROOT)/pkg/version.gitCommit=$(GITCOMMIT)                            \
+	          -X $(ROOT)/pkg/version.gitTreeState=$(GITTREESTATE)                      \
+	          -X $(ROOT)/pkg/version.buildDate=$(BUILDDATE)"                           \
       	    $(CMD_DIR)/$${target};                                                     \
 	  done'
 
