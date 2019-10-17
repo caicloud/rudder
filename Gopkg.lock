@@ -220,12 +220,15 @@
   revision = "f044571b72093f97ddeaeaacb19b1aba8264bfe3"
 
 [[projects]]
-  digest = "1:0720fd703371513d2e32abe3dfcf1f1c283ac90f0454be9e1a0e8179c59d7280"
+  digest = "1:12a3775b18602794bcd9fde3be0b4e3beb3c93a58f6f9f3204d4c4134616c68e"
   name = "github.com/caicloud/go-common"
-  packages = ["interfaces"]
+  packages = [
+    "interfaces",
+    "version",
+  ]
   pruneopts = "UT"
-  revision = "fa5372afff619614d7af386e0cc63d270d005a9d"
-  version = "v0.1.4"
+  revision = "5995733ca8bffdc4d822ace48d1a00d39f568f5e"
+  version = "v0.2.1"
 
 [[projects]]
   branch = "master"
@@ -992,6 +995,7 @@
     "github.com/caicloud/clientset/pkg/apis/release/v1alpha1",
     "github.com/caicloud/clientset/util/syncqueue",
     "github.com/caicloud/go-common/interfaces",
+    "github.com/caicloud/go-common/version",
     "github.com/caicloud/rudder-client/status",
     "github.com/caicloud/rudder-client/status/universal",
     "github.com/evanphx/json-patch",
