@@ -6,6 +6,7 @@ import (
 	"github.com/caicloud/clientset/listerfactory"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	podstatus "github.com/caicloud/clientset/util/status"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -51,7 +52,7 @@ func newLongRunning(factory listerfactory.ListerFactory, obj runtime.Object) (*l
 func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error) {
 	// predicts resource status from events
 	// remain it util we get PodStatistics
-	predictEventsIssue := d.delegate.PredictEvents(d.events)
+	predictEventsIssue, lastEvent := d.delegate.PredictEvents(d.events)
 
 	// predicts resource status from updated revision and get updated revision key
 	predictRevisionIssue, err := d.delegate.PredictUpdatedRevision(d.factory, d.events)
@@ -60,7 +61,7 @@ func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error
 	}
 
 	// we should get pod statistics before returning predict revision status
-	// separate pods inte updated and old
+	// separate pods into updated and old
 	updated, old, err := d.Pods()
 	if err != nil {
 		return releaseapi.ResourceStatusFrom(""), err
@@ -76,6 +77,19 @@ func (d *longRunning) Judge() (resStatus releaseapi.ResourceStatus, retErr error
 	// judge status from pods
 	judgeFromPods := d.judge(d.delegate.DesiredReplics(), updated, old)
 
+	// If replicas of daemonset is zero, check event issue and revision issue
+	// bacause daemonset's replicas should not be zero.
+	if len(updated)+len(old) == 0 && lastEvent != nil &&
+		lastEvent.InvolvedObject.Kind == "DaemonSet" &&
+		judgeFromPods.Phase != releaseapi.ResourceRunning {
+		if predictEventsIssue != nil {
+			return *predictEventsIssue, nil
+		}
+
+		if predictRevisionIssue != nil {
+			return *predictRevisionIssue, nil
+		}
+	}
 	switch judgeFromPods.Phase {
 	case releaseapi.ResourceProgressing, releaseapi.ResourceUpdating:
 		if predictEventsIssue != nil {

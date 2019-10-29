@@ -3,6 +3,7 @@ package v1
 import (
 	"github.com/caicloud/clientset/listerfactory"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
