@@ -4,35 +4,17 @@ import (
 	"fmt"
 	"sort"
 
+	statusbatchv1 "github.com/caicloud/rudder-client/status/batch/v1"
+
 	"github.com/caicloud/clientset/listerfactory"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	statusbatchv1 "github.com/caicloud/rudder-client/status/batch/v1"
+
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 )
-
-// SortJobByCreationTimestamp sorts job by creation time
-type SortJobByCreationTimestamp []*batchv1.Job
-
-func (x SortJobByCreationTimestamp) Len() int {
-	return len(x)
-}
-
-func (x SortJobByCreationTimestamp) Swap(i, j int) {
-	x[i], x[j] = x[j], x[i]
-}
-
-func (x SortJobByCreationTimestamp) Less(i, j int) bool {
-	itime := x[i].CreationTimestamp
-	jtime := x[j].CreationTimestamp
-	if itime.After(jtime.Time) {
-		return true
-	}
-	return false
-}
 
 func JudgeCronJob(factory listerfactory.ListerFactory, obj runtime.Object) (releaseapi.ResourceStatus, error) {
 	cronjob, ok := obj.(*batchv1beta1.CronJob)
@@ -57,8 +39,10 @@ func JudgeCronJob(factory listerfactory.ListerFactory, obj runtime.Object) (rele
 	if len(jobList) == 0 {
 		return releaseapi.ResourceStatusFrom(releaseapi.ResourcePending), nil
 	}
-
-	sort.Sort(SortJobByCreationTimestamp(jobList))
+	// sorts job by creation time
+	sort.Slice(jobList, func(i, j int) bool {
+		return jobList[i].CreationTimestamp.After(jobList[j].CreationTimestamp.Time)
+	})
 
 	return statusbatchv1.JudgeJob(factory, jobList[0])
 }

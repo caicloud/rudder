@@ -10,6 +10,7 @@ import (
 	"github.com/caicloud/clientset/listerfactory"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/clientset/util/event"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -20,8 +21,7 @@ import (
 
 var (
 	dsetErrorEventCases = []event.EventCase{
-		// match all FailedCreate
-		{EventType: corev1.EventTypeWarning, Reason: event.FailedCreatePodReason},
+		{EventType: corev1.EventTypeWarning, Reason: event.FailedCreatePodReason}, // match all FailedCreate
 		{EventType: corev1.EventTypeWarning, Reason: event.FailedPlacementPodReason},
 	}
 )
@@ -79,15 +79,15 @@ func (d *daemonsetLongRunning) IsUpdatedPod(pod *corev1.Pod) bool {
 
 	hash := getLabel(d.updatedRevision, appsv1.DefaultDaemonSetUniqueLabelKey)
 
-	generation, err := GetTemplateGeneration(d.daemonset)
+	generation, err := getTemplateGeneration(d.daemonset)
 	if err != nil {
 		generation = nil
 	}
 
-	return IsUpdatedPodOfDaemonSet(pod, hash, generation)
+	return isUpdatedPodOfDaemonSet(pod, hash, generation)
 }
 
-func (d *daemonsetLongRunning) PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus {
+func (d *daemonsetLongRunning) PredictEvents(events []*corev1.Event) (*releaseapi.ResourceStatus, *corev1.Event) {
 	lastEvent := getLatestEventFor(d.daemonset.GroupVersionKind().Kind, d.daemonset, events)
 	for _, c := range dsetErrorEventCases {
 		if c.Match(lastEvent) {
@@ -95,10 +95,10 @@ func (d *daemonsetLongRunning) PredictEvents(events []*corev1.Event) *releaseapi
 				Phase:   releaseapi.ResourceFailed,
 				Reason:  lastEvent.Reason,
 				Message: lastEvent.Message,
-			}
+			}, lastEvent
 		}
 	}
-	return nil
+	return nil, lastEvent
 }
 
 func (d *daemonsetLongRunning) DesiredReplics() int32 {
@@ -119,25 +119,19 @@ func getHistoriesForDaemonSet(historyLister appslisters.ControllerRevisionLister
 	return historyLister.ControllerRevisions(daemonset.Namespace).List(selector)
 }
 
-// ControllerRevisionByRevision sorts a list of ControllerRevision by revision (desc), using their names as a tie breaker.
-type ControllerRevisionByRevision []*appsv1.ControllerRevision
-
-func (o ControllerRevisionByRevision) Len() int      { return len(o) }
-func (o ControllerRevisionByRevision) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
-func (o ControllerRevisionByRevision) Less(i, j int) bool {
-	if o[i].Revision == o[i].Revision {
-		return o[i].Name < o[j].Name
-	}
-	return o[i].Revision > o[i].Revision
-}
-
 func getUpdateHistoryForDaemonSet(daemonset *appsv1.DaemonSet, histories []*appsv1.ControllerRevision) (*appsv1.ControllerRevision, error) {
 	patch, err := getPatch(daemonset)
 	if err != nil {
 		return nil, err
 	}
 
-	sort.Sort(ControllerRevisionByRevision(histories))
+	// sort a list of ControllerRevision by revision (desc), using their names as a tie breaker
+	sort.Slice(histories, func(i, j int) bool {
+		if histories[i].Revision == histories[j].Revision {
+			return histories[i].Name < histories[j].Name
+		}
+		return histories[i].Revision > histories[j].Revision
+	})
 
 	for _, history := range histories {
 		if bytes.Equal(patch, history.Data.Raw) {
@@ -174,11 +168,11 @@ func getPatch(ds *appsv1.DaemonSet) ([]byte, error) {
 	return patch, err
 }
 
-// GetTemplateGeneration gets the template generation associated with a v1.DaemonSet by extracting it from the
+// getTemplateGeneration gets the template generation associated with a v1.DaemonSet by extracting it from the
 // deprecated annotation. If no annotation is found nil is returned. If the annotation is found and fails to parse
 // nil is returned with an error. If the generation can be parsed from the annotation, a pointer to the parsed int64
 // value is returned.
-func GetTemplateGeneration(ds *appsv1.DaemonSet) (*int64, error) {
+func getTemplateGeneration(ds *appsv1.DaemonSet) (*int64, error) {
 	annotation, found := ds.Annotations[appsv1.DeprecatedTemplateGeneration]
 	if !found {
 		return nil, nil
@@ -190,10 +184,11 @@ func GetTemplateGeneration(ds *appsv1.DaemonSet) (*int64, error) {
 	return &generation, nil
 }
 
-// IsUpdatedPodOfDaemonSet checks if pod contains label value that either matches templateGeneration or hash
-func IsUpdatedPodOfDaemonSet(pod *corev1.Pod, hash string, dsTemplateGeneration *int64) bool {
+// isUpdatedPodOfDaemonSet checks if pod contains label value that either matches templateGeneration or hash
+func isUpdatedPodOfDaemonSet(pod *corev1.Pod, hash string, dsTemplateGeneration *int64) bool {
 	// Compare with hash to see if the pod is updated, need to maintain backward compatibility of templateGeneration
 	templateMatches := dsTemplateGeneration != nil &&
+		// TODO: deprecated key
 		pod.Labels[extensions.DaemonSetTemplateGenerationKey] == fmt.Sprint(dsTemplateGeneration)
 	hashMatches := len(hash) > 0 && pod.Labels[appsv1.DefaultDaemonSetUniqueLabelKey] == hash
 	return hashMatches || templateMatches

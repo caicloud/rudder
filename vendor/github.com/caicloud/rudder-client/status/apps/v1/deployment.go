@@ -6,6 +6,7 @@ import (
 
 	"github.com/caicloud/clientset/listerfactory"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -58,8 +59,7 @@ func (d *deploymentLongRunning) PredictUpdatedRevision(factory listerfactory.Lis
 	// due to insufficient quota, limit ranges, pod security policy, node selectors, etc. or deleted
 	// due to kubelet being down or finalizers are failing.
 	for _, c := range d.updateRevision.Status.Conditions {
-		if c.Type == appsv1.ReplicaSetReplicaFailure &&
-			c.Status == corev1.ConditionTrue {
+		if c.Type == appsv1.ReplicaSetReplicaFailure && c.Status == corev1.ConditionTrue {
 			return &releaseapi.ResourceStatus{
 				Phase:   releaseapi.ResourceFailed,
 				Reason:  c.Reason,
@@ -85,8 +85,8 @@ func (d *deploymentLongRunning) IsUpdatedPod(pod *corev1.Pod) bool {
 	return latest
 }
 
-func (d *deploymentLongRunning) PredictEvents(events []*corev1.Event) *releaseapi.ResourceStatus {
-	return nil
+func (d *deploymentLongRunning) PredictEvents(events []*corev1.Event) (*releaseapi.ResourceStatus, *corev1.Event) {
+	return nil, nil
 }
 
 func (d *deploymentLongRunning) DesiredReplics() int32 {
@@ -112,8 +112,7 @@ func getReplicaSetsforDeployment(rslister appslisters.ReplicaSetLister, deployme
 LOOP:
 	for _, rs := range rsList {
 		for _, owner := range rs.OwnerReferences {
-			if owner.UID == deployment.UID &&
-				owner.Name == deployment.Name {
+			if owner.UID == deployment.UID && owner.Name == deployment.Name {
 				ret = append(ret, rs)
 				continue LOOP
 			}
@@ -123,19 +122,9 @@ LOOP:
 	return ret, nil
 }
 
-// Note(li-ang): Deployment will stop adding pod-template-hash labels/selector to ReplicaSets and Pods it adopts. Resources created by Deployments are not affected (will still have pod-template-hash labels/selector).  ([#61615](https://github.com/kubernetes/kubernetes/pull/61615), [@janetkuo](https://github.com/janetkuo))
-
-// ReplicaSetsByCreationTimestamp sorts a list of ReplicaSet by creation timestamp, using their names as a tie breaker.
-type ReplicaSetsByCreationTimestamp []*appsv1.ReplicaSet
-
-func (o ReplicaSetsByCreationTimestamp) Len() int      { return len(o) }
-func (o ReplicaSetsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
-func (o ReplicaSetsByCreationTimestamp) Less(i, j int) bool {
-	if o[i].CreationTimestamp.Equal(&o[j].CreationTimestamp) {
-		return o[i].Name < o[j].Name
-	}
-	return o[i].CreationTimestamp.Before(&o[j].CreationTimestamp)
-}
+// Note(li-ang): Deployment will stop adding pod-template-hash labels/selector to ReplicaSets and Pods it adopts.
+// Resources created by Deployments are not affected (will still have pod-template-hash labels/selector).
+// ([#61615](https://github.com/kubernetes/kubernetes/pull/61615), [@janetkuo](https://github.com/janetkuo))
 
 // getUpdatedReplicaSetForDeployment returns the updated RS this given deployment targets (the one with the same pod template).
 // In rare cases, such as after cluster upgrades, Deployment may end up with
@@ -143,7 +132,13 @@ func (o ReplicaSetsByCreationTimestamp) Less(i, j int) bool {
 // see https://github.com/kubernetes/kubernetes/issues/40415
 // We deterministically choose the oldest and non-zero replicas ReplicaSet.
 func getUpdatedReplicaSetForDeployment(deployment *appsv1.Deployment, rsList []*appsv1.ReplicaSet) *appsv1.ReplicaSet {
-	sort.Sort(ReplicaSetsByCreationTimestamp(rsList))
+	// sort a list of ReplicaSet by creation timestamp, using their names as a tie breaker
+	sort.Slice(rsList, func(i, j int) bool {
+		if rsList[i].CreationTimestamp.Equal(&rsList[j].CreationTimestamp) {
+			return rsList[i].Name < rsList[j].Name
+		}
+		return rsList[i].CreationTimestamp.Before(&rsList[j].CreationTimestamp)
+	})
 
 	candidates := make([]*appsv1.ReplicaSet, 0)
 
@@ -159,8 +154,7 @@ func getUpdatedReplicaSetForDeployment(deployment *appsv1.Deployment, rsList []*
 
 	firstCandidates := candidates[0]
 	for i := range candidates {
-		if candidates[i].Spec.Replicas != nil &&
-			*candidates[i].Spec.Replicas == 0 {
+		if candidates[i].Spec.Replicas != nil && *candidates[i].Spec.Replicas == 0 {
 			// ignore zero replicas to find the oldest and non-zero replicas ReplicaSet.
 			continue
 		}

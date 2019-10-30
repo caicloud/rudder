@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
-	"github.com/caicloud/clientset/util/event"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,12 +58,13 @@ func getLatestEventFor(kind string, obj metav1.Object, events []*corev1.Event) *
 	if len(ret) == 0 {
 		return nil
 	}
-	sort.Sort(event.EventByLastTimestamp(ret))
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].LastTimestamp.After(ret[j].LastTimestamp.Time)
+	})
 	return ret[0]
 }
 
 func getPodStatistics(updated []HyperPod, old []HyperPod) *releaseapi.PodStatistics {
-
 	if len(updated) == 0 && len(old) == 0 {
 		return nil
 	}
@@ -73,21 +74,11 @@ func getPodStatistics(updated []HyperPod, old []HyperPod) *releaseapi.PodStatist
 		OldPods:     make(releaseapi.PodStatusCounter, len(old)),
 	}
 	for _, pod := range updated {
-		_, ok := ret.UpdatedPods[pod.Status.Phase]
-		if ok {
-			ret.UpdatedPods[pod.Status.Phase]++
-		} else {
-			ret.UpdatedPods[pod.Status.Phase] = 1
-		}
+		ret.UpdatedPods[pod.Status.Phase]++
 	}
 
 	for _, pod := range old {
-		_, ok := ret.OldPods[pod.Status.Phase]
-		if ok {
-			ret.OldPods[pod.Status.Phase]++
-		} else {
-			ret.OldPods[pod.Status.Phase] = 1
-		}
+		ret.OldPods[pod.Status.Phase]++
 	}
 
 	return &ret
