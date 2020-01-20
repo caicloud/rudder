@@ -58,8 +58,14 @@ func (c *client) applyIPSpecDecreasing(client *ResourceClient, namespace string,
 	}
 	// set deployment/statefulset anno
 	tempObj := existence.DeepCopyObject()
-	setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPs, targetAnnoValue)
-	setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPsDecreasing, "") // rm on final update
+	updated := setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPs, targetAnnoValue)
+	if !updated {
+		glog.Infof("didn't update annotation (%s) for runtime object: nil or up to date", AnnoKeySpecifiedIPs)
+	}
+	updated = setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPsDecreasing, "") // rm on final update
+	if !updated {
+		glog.Infof("didn't update annotation (%s) for runtime object: nil or up to date", AnnoKeySpecifiedIPsDecreasing)
+	}
 	// do deployment/statefulset update
 	if _, err = client.Update(tempObj); err != nil {
 		return err
