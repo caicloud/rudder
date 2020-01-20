@@ -60,11 +60,11 @@ func (c *client) applyIPSpecDecreasing(client *ResourceClient, namespace string,
 	tempObj := existence.DeepCopyObject()
 	updated := setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPs, targetAnnoValue)
 	if !updated {
-		glog.Infof("fail to set annotation (%s) for runtime object", AnnoKeySpecifiedIPs)
+		glog.Infof("didn't update annotation (%s) for runtime object: nil or up to date", AnnoKeySpecifiedIPs)
 	}
 	updated = setRuntimeObjectAnnotationValue(tempObj, AnnoKeySpecifiedIPsDecreasing, "") // rm on final update
 	if !updated {
-		glog.Infof("fail to set annotation (%s) for runtime object", AnnoKeySpecifiedIPsDecreasing)
+		glog.Infof("didn't update annotation (%s) for runtime object: nil or up to date", AnnoKeySpecifiedIPsDecreasing)
 	}
 	// do deployment/statefulset update
 	if _, err = client.Update(tempObj); err != nil {
