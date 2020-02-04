@@ -56,7 +56,7 @@ type ControllerContext struct {
 func Run(s *options.ReleaseServer) error {
 	glog.Infof("Initialize release server")
 	glog.Infof("Rudder Build Information, %v", version.Get().Pretty())
-	kubeConfig, err := clientcmd.BuildConfigFromFlags(c.MasterURL, c.Kubeconfig)
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", s.Kubeconfig)
 	if err != nil {
 		return err
 	}
