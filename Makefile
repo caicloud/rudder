@@ -1,19 +1,19 @@
-# Copyright 2017 The Caicloud Authors.
+# Copyright 2019 The Caicloud Authors.
 #
 # The old school Makefile, following are required targets. The Makefile is written
 # to allow building multiple binaries. You are free to add more targets or change
 # existing implementations, as long as the semantics are preserved.
 #
-#   make        - default to 'build' target
-#   make lint   - code analysis
-#   make test   - run unit test (or plus integration test)
+#   make        	  - default to 'build' target
+#   make lint   	  - code analysis
+#   make test   	  - run unit test (or plus integration test)
 #   make build        - alias to build-local target
 #   make build-local  - build local binary targets
 #   make build-linux  - build linux binary targets
 #   make container    - build containers
 #   $ docker login registry -u username -p xxxxx
-#   make push    - push containers
-#   make clean   - clean up targets
+#   make push    	  - push containers
+#   make clean   	  - clean up targets
 #
 # Not included but recommended targets:
 #   make e2e-test
@@ -49,7 +49,8 @@ BASE_REGISTRY ?= cargo.caicloud.xyz/library
 #
 
 # It's necessary to set this because some environments don't link sh -> bash.
-SHELL := /bin/bash
+export SHELL     := /bin/bash
+export SHELLOPTS := errexit
 
 # Project main package location (can be multiple ones).
 CMD_DIR := ./cmd
@@ -61,15 +62,21 @@ OUTPUT_DIR := ./bin
 BUILD_DIR := ./build
 
 # Current version of the project.
-VERSION ?= $(shell git describe --tags --always --dirty)
+VERSION      ?= $(shell git describe --tags --always --dirty)
+GITREMOTE    ?= $(shell git remote get-url origin)
+GITCOMMIT    ?= $(shell git rev-parse HEAD)
+GITTREESTATE ?= $(if $(shell git status --porcelain),dirty,clean)
+BUILDDATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GOCOMMON     := $(ROOT)/vendor/github.com/caicloud/go-common
 
 # Available cpus for compiling, please refer to https://github.com/caicloud/engineering/issues/8186#issuecomment-518656946 for more information.
-CPUS_AVAILABLE ?= $(shell sh hack/read_cpus_available.sh)
+CPUS ?= $(shell /bin/bash hack/read_cpus_available.sh)
 
 # Track code version with Docker Label.
 DOCKER_LABELS ?= git-describe="$(shell date -u +v%Y%m%d)-$(shell git describe --tags --always --dirty)"
 
 # Golang standard bin directory.
+GOPATH ?= $(shell go env GOPATH)
 BIN_DIR := $(GOPATH)/bin
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
@@ -83,39 +90,45 @@ GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 build: build-local
 
 # more info about `GOGC` env: https://github.com/golangci/golangci-lint#memory-usage-of-golangci-lint
-#	@GOGC=5 golangci-lint run
-lint:
-	@-echo "hello"
+lint: $(GOLANGCI_LINT)
+	@-echo "hello lint"
 
 $(GOLANGCI_LINT):
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(BIN_DIR) v1.16.0
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(BIN_DIR) v1.20.1
 
 test:
-	@go test $$(go list ./... | grep -v /vendor | grep -v /test) -coverprofile=coverage.out
+	@go test -p $(CPUS) $$(go list ./... | grep -v /vendor | grep -v /test) -coverprofile=coverage.out
 	@go tool cover -func coverage.out | tail -n 1 | awk '{ print "Total coverage: " $$3 }'
 
 build-local:
 	@for target in $(TARGETS); do                                                      \
-	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS_AVAILABLE)                  \
-	  -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)                        \
-	    -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)"                                       \
+	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                            \
+	  -ldflags "-s -w -X $(GOCOMMON)/version.VERSION=$(VERSION)                        \
+	    -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                                  \
+	    -X $(GOCOMMON)/version.gitCommit=$(GITCOMMIT)                                  \
+	    -X $(GOCOMMON)/version.gitTreeState=$(GITTREESTATE)                            \
+	    -X $(GOCOMMON)/version.buildDate=$(BUILDDATE)"                                 \
 	  $(CMD_DIR)/$${target};                                                           \
 	done
 
 build-linux:
-	@for target in $(TARGETS); do                                                      \
-	  docker run --rm                                                                  \
-	    -v $(PWD):/go/src/$(ROOT)                                                      \
-	    -w /go/src/$(ROOT)                                                             \
-	    -e GOOS=linux                                                                  \
-	    -e GOARCH=amd64                                                                \
-	    -e GOPATH=/go                                                                  \
-	    $(BASE_REGISTRY)/golang:1.12.9-stretch                                         \
-	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS_AVAILABLE)              \
-	        -ldflags "-s -w -X $(ROOT)/pkg/version.VERSION=$(VERSION)                  \
-	          -X $(ROOT)/pkg/version.REPOROOT=$(ROOT)"                                 \
+	@docker run --rm -t                                                                \
+	  -v $(PWD):/go/src/$(ROOT)                                                        \
+	  -w /go/src/$(ROOT)                                                               \
+	  -e GOOS=linux                                                                    \
+	  -e GOARCH=amd64                                                                  \
+	  -e GOPATH=/go                                                                    \
+	  -e SHELLOPTS=$(SHELLOPTS)                                                        \
+	  $(BASE_REGISTRY)/golang:1.9.2-alpine3.6                                          \
+	    /bin/bash -c 'for target in $(TARGETS); do                                     \
+	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
+	        -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                  \
+	          -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                            \
+	          -X $(GOCOMMON)/version.gitCommit=$(GITCOMMIT)                            \
+	          -X $(GOCOMMON)/version.gitTreeState=$(GITTREESTATE)                      \
+	          -X $(GOCOMMON)/version.buildDate=$(BUILDDATE)"                           \
 	        $(CMD_DIR)/$${target};                                                     \
-	done
+	  done'
 
 container: build-linux
 	@for target in $(TARGETS); do                                                      \
