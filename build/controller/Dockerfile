@@ -2,11 +2,11 @@
 # Copyright 2017 The Caicloud Authors.
 #
 
-FROM cargo.caicloudprivatetest.com/caicloud/alpine:3.7
+FROM cargo.caicloud.xyz/library/debian:stretch
 
 RUN mkdir /data
 
-COPY bin/linux_amd64/controller /release
+COPY bin/controller /release
 
 ENTRYPOINT ["/release"]
 CMD ["-v4"]
