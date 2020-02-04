@@ -140,7 +140,7 @@ func walkthrough(prefix string, obj interface{}) map[string]map[string]bool {
 		result[prefix] = map[string]bool{reflect.Float64.String(): true}
 	default:
 		// Unreachable
-		glog.Fatalln("Unknown object type: %s", reflect.TypeOf(obj).String())
+		glog.Fatalf("Unknown object type: %v", reflect.TypeOf(obj).String())
 	}
 	return result
 }
