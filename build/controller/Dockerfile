@@ -2,7 +2,7 @@
 # Copyright 2017 The Caicloud Authors.
 #
 
-FROM cargo.caicloud.xyz/library/debian:stretch
+FROM cargo.caicloudprivatetest.com/caicloud/alpine:3.7
 
 RUN mkdir /data
 
