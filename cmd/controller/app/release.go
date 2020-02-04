@@ -11,6 +11,7 @@ import (
 	"github.com/caicloud/clientset/kubernetes"
 	"github.com/caicloud/clientset/kubernetes/scheme"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+	"github.com/caicloud/go-common/kubernetes/client"
 	"github.com/caicloud/go-common/version"
 
 	"github.com/golang/glog"
@@ -55,11 +56,11 @@ type ControllerContext struct {
 func Run(s *options.ReleaseServer) error {
 	glog.Infof("Initialize release server")
 	glog.Infof("Rudder Build Information, %v", version.Get().Pretty())
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", s.Kubeconfig)
+	kubeConfig, err := clientcmd.BuildConfigFromFlags(c.MasterURL, c.Kubeconfig)
 	if err != nil {
 		return err
 	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	kubeClient, err := client.NewFromConfig(kubeConfig)
 	if err != nil {
 		return err
 	}
