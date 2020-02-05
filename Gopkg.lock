@@ -43,7 +43,7 @@
 
 [[projects]]
   branch = "release-1.12"
-  digest = "1:f112e14fcf144d7fb374c75dd8eef49703b4cb8c052a25cc413bfcd945f3f01e"
+  digest = "1:eac3fc410d6071d28b14d782578032c35ff4860ed0fccde714ad37e9fa150213"
   name = "github.com/caicloud/clientset"
   packages = [
     "informers",
@@ -195,7 +195,15 @@
     "util/syncqueue",
   ]
   pruneopts = "UT"
-  revision = "3ff45204952a2967c48d3487d448d7bbfc86c0c4"
+  revision = "074f696502de30031ed43bb737b3949ed4c99074"
+
+[[projects]]
+  digest = "1:236fb53b3d1c98ffe65bf740863808e3d6d7d6cbfbb1a7a8943d11648df6a47a"
+  name = "github.com/caicloud/go-common"
+  packages = ["kubernetes/client"]
+  pruneopts = "UT"
+  revision = "34dfb37a364d1dfc5ce62ac18c5c8be4d3f605a4"
+  version = "v0.0.1"
 
 [[projects]]
   branch = "master"
@@ -939,6 +947,7 @@
     "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1",
     "github.com/caicloud/clientset/pkg/apis/release/v1alpha1",
     "github.com/caicloud/clientset/util/syncqueue",
+    "github.com/caicloud/go-common/kubernetes/client",
     "github.com/caicloud/rudder-client/status",
     "github.com/caicloud/rudder-client/status/universal",
     "github.com/evanphx/json-patch",
