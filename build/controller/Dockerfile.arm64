@@ -1,10 +1,8 @@
-FROM cargo.dev.caicloud.xyz/arm64v8/debian:stretch
-
-ARG ARCH=arm64
+FROM cargo.caicloud.xyz/arm64v8/debian:stretch
 
 RUN mkdir /data
 
-COPY bin/controller-${ARCH} /release
+COPY bin/controller /release
 
 ENTRYPOINT ["/release"]
 CMD ["-v4"]

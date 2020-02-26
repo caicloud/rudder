@@ -29,7 +29,8 @@
 ROOT := github.com/caicloud/rudder
 
 # Target binaries. You can build multiple binaries for a single project.
-TARGETS := controller release-cli
+TARGETS_CONTAINER := controller
+TARGETS_BINARY := controller release-cli
 
 # Container image prefix and suffix added to targets.
 # The final built images are:
@@ -110,7 +111,7 @@ test:
 	@go tool cover -func coverage.out | tail -n 1 | awk '{ print "Total coverage: " $$3 }'
 
 build-local:
-	@for target in $(TARGETS); do                                                      \
+	@for target in $(TARGETS_BINARY); do                                                      \
 	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                            \
 	  -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                        \
 	    -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                                  \
@@ -129,8 +130,8 @@ build-linux:
 	  -e GOPATH=/go                                                                    \
 	  -e SHELLOPTS=$(SHELLOPTS)                                                        \
 	  $(BASE_REGISTRY)/golang:1.10.4-stretch                                           \
-	    /bin/bash -c 'for target in $(TARGETS); do                                     \
-	      go build -i -v -o $(OUTPUT_DIR)/$${target}-${ARCH} -p $(CPUS)                \
+	    /bin/bash -c 'for target in $(TARGETS_BINARY); do                              \
+	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
 	        -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                  \
 	          -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                            \
 	          -X $(GOCOMMON)/version.gitCommit=$(GITCOMMIT)                            \
@@ -140,16 +141,15 @@ build-linux:
 	    done'
 
 container: build-linux
-	@for target in $(TARGETS); do                                                      \
+	@for target in $(TARGETS_CONTAINER); do                                            \
 	  image=$(IMAGE_PREFIX)$${target}$(IMAGE_SUFFIX);                                  \
 	  docker build -t $(REGISTRY)/$${image}:$(VERSION)                                 \
 	    --label $(DOCKER_LABELS)                                                       \
-	    --build-arg ARCH=${ARCH}                                                       \
 	    -f $(BUILD_DIR)/$${target}/$(DOCKERFILE) .;                                    \
 	done
 
 push: container
-	@for target in $(TARGETS); do                                                      \
+	@for target in $(TARGETS_CONTAINER); do                                            \
 	  image=$(IMAGE_PREFIX)$${target}$(IMAGE_SUFFIX);                                  \
 	  docker push $(REGISTRY)/$${image}:$(VERSION);                                    \
 	done

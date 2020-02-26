@@ -1,10 +1,8 @@
 FROM cargo.caicloud.xyz/library/debian:stretch
 
-ARG ARCH=amd64
-
 RUN mkdir /data
 
-COPY bin/controller-${ARCH} /release
+COPY bin/controller /release
 
 ENTRYPOINT ["/release"]
 CMD ["-v4"]
