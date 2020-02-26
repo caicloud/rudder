@@ -1,6 +1,6 @@
-FROM cargo.caicloud.xyz/library/debian:stretch
+FROM cargo.dev.caicloud.xyz/arm64v8/debian:stretch
 
-ARG ARCH=amd64
+ARG ARCH=arm64
 
 RUN mkdir /data
 
