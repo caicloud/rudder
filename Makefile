@@ -4,16 +4,16 @@
 # to allow building multiple binaries. You are free to add more targets or change
 # existing implementations, as long as the semantics are preserved.
 #
-#   make        	  - default to 'build' target
-#   make lint   	  - code analysis
-#   make test   	  - run unit test (or plus integration test)
+#   make              - default to 'build' target
+#   make lint         - code analysis
+#   make test         - run unit test (or plus integration test)
 #   make build        - alias to build-local target
 #   make build-local  - build local binary targets
 #   make build-linux  - build linux binary targets
 #   make container    - build containers
 #   $ docker login registry -u username -p xxxxx
-#   make push    	  - push containers
-#   make clean   	  - clean up targets
+#   make push         - push containers
+#   make clean        - clean up targets
 #
 # Not included but recommended targets:
 #   make e2e-test
@@ -29,7 +29,8 @@
 ROOT := github.com/caicloud/rudder
 
 # Target binaries. You can build multiple binaries for a single project.
-TARGETS := controller release-cli
+TARGETS_CONTAINER := controller
+TARGETS_BINARY := controller release-cli
 
 # Container image prefix and suffix added to targets.
 # The final built images are:
@@ -38,11 +39,20 @@ TARGETS := controller release-cli
 IMAGE_PREFIX ?= $(strip release-)
 IMAGE_SUFFIX ?= $(strip )
 
-# Container registries.
-REGISTRY ?= cargo.dev.caicloud.xyz/release
-
 # Container registry for base images.
 BASE_REGISTRY ?= cargo.caicloud.xyz/library
+
+# Go build GOARCH, you can choose to build amd64 or arm64
+ARCH ?= amd64
+
+# Change Dockerfile name and registry project name for arm64
+ifeq ($(ARCH),arm64)
+DOCKERFILE := Dockerfile.arm64
+REGISTRY ?= cargo.dev.caicloud.xyz/arm64v8
+else
+DOCKERFILE := Dockerfile
+REGISTRY ?= cargo.dev.caicloud.xyz/release
+endif
 
 #
 # These variables should not need tweaking.
@@ -101,9 +111,9 @@ test:
 	@go tool cover -func coverage.out | tail -n 1 | awk '{ print "Total coverage: " $$3 }'
 
 build-local:
-	@for target in $(TARGETS); do                                                      \
+	@for target in $(TARGETS_BINARY); do                                                      \
 	  go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                            \
-	  -ldflags "-s -w -X $(GOCOMMON)/version.VERSION=$(VERSION)                        \
+	  -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                        \
 	    -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                                  \
 	    -X $(GOCOMMON)/version.gitCommit=$(GITCOMMIT)                                  \
 	    -X $(GOCOMMON)/version.gitTreeState=$(GITTREESTATE)                            \
@@ -116,11 +126,11 @@ build-linux:
 	  -v $(PWD):/go/src/$(ROOT)                                                        \
 	  -w /go/src/$(ROOT)                                                               \
 	  -e GOOS=linux                                                                    \
-	  -e GOARCH=amd64                                                                  \
+	  -e GOARCH=$(ARCH)                                                                \
 	  -e GOPATH=/go                                                                    \
 	  -e SHELLOPTS=$(SHELLOPTS)                                                        \
-	  $(BASE_REGISTRY)/golang:1.10.4-stretch                                          \
-	    /bin/bash -c 'for target in $(TARGETS); do                                     \
+	  $(BASE_REGISTRY)/golang:1.10.4-stretch                                           \
+	    /bin/bash -c 'for target in $(TARGETS_BINARY); do                              \
 	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
 	        -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                  \
 	          -X $(GOCOMMON)/version.gitRemote=$(GITREMOTE)                            \
@@ -128,18 +138,18 @@ build-linux:
 	          -X $(GOCOMMON)/version.gitTreeState=$(GITTREESTATE)                      \
 	          -X $(GOCOMMON)/version.buildDate=$(BUILDDATE)"                           \
 	        $(CMD_DIR)/$${target};                                                     \
-	  done'
+	    done'
 
 container: build-linux
-	@for target in $(TARGETS); do                                                      \
+	@for target in $(TARGETS_CONTAINER); do                                            \
 	  image=$(IMAGE_PREFIX)$${target}$(IMAGE_SUFFIX);                                  \
 	  docker build -t $(REGISTRY)/$${image}:$(VERSION)                                 \
 	    --label $(DOCKER_LABELS)                                                       \
-	    -f $(BUILD_DIR)/$${target}/Dockerfile .;                                       \
+	    -f $(BUILD_DIR)/$${target}/$(DOCKERFILE) .;                                    \
 	done
 
 push: container
-	@for target in $(TARGETS); do                                                      \
+	@for target in $(TARGETS_CONTAINER); do                                            \
 	  image=$(IMAGE_PREFIX)$${target}$(IMAGE_SUFFIX);                                  \
 	  docker push $(REGISTRY)/$${image}:$(VERSION);                                    \
 	done
