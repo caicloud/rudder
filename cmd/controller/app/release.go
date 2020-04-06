@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/caicloud/rudder/cmd/controller/app/options"
@@ -22,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -60,6 +63,18 @@ func Run(s *options.ReleaseServer) error {
 	if err != nil {
 		return err
 	}
+	mux := http.NewServeMux()
+	healthz.InstallPathHandler(mux, "/healthz")
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.HTTPPort),
+		Handler: mux,
+	}
+	go func() {
+		glog.Infof("Start listening to %d", s.HTTPPort)
+		if err := server.ListenAndServe(); err != nil {
+			glog.Fatalf("Error starting server: %v", err)
+		}
+	}()
 	kubeClient, err := client.NewFromConfig(kubeConfig)
 	if err != nil {
 		return err
