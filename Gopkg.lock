@@ -674,10 +674,11 @@
   version = "kubernetes-1.14.2"
 
 [[projects]]
-  digest = "1:961abc41dfa5e1cebc786b794f74c5b4feb53ccd16e118b42ec115f50b2492af"
+  digest = "1:41ced69e3fb3854a5c2981c8ea72492da4cede9240fd2453726c60c8b8a73ab5"
   name = "k8s.io/apiserver"
   packages = [
     "pkg/features",
+    "pkg/server/healthz",
     "pkg/util/feature",
   ]
   pruneopts = "UT"
@@ -1025,6 +1026,7 @@
     "k8s.io/apimachinery/pkg/util/strategicpatch",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/watch",
+    "k8s.io/apiserver/pkg/server/healthz",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/cache",
