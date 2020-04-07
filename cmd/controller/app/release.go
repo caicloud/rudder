@@ -64,13 +64,13 @@ func Run(s *options.ReleaseServer) error {
 		return err
 	}
 	mux := http.NewServeMux()
-	healthz.InstallPathHandler(mux, "/healthz")
+	healthz.InstallHandler(mux)
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.HTTPPort),
+		Addr:    fmt.Sprintf(":%d", s.HealthzPort),
 		Handler: mux,
 	}
 	go func() {
-		glog.Infof("Start listening to %d", s.HTTPPort)
+		glog.Infof("Start listening to %d", s.HealthzPort)
 		if err := server.ListenAndServe(); err != nil {
 			glog.Fatalf("Error starting server: %v", err)
 		}
