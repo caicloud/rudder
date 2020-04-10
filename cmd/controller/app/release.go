@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/klog"
-
 	"github.com/caicloud/rudder/cmd/controller/app/options"
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/store"
@@ -27,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog"
 )
 
 type ControllerContext struct {
