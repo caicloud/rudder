@@ -220,11 +220,13 @@
   revision = "f044571b72093f97ddeaeaacb19b1aba8264bfe3"
 
 [[projects]]
-  digest = "1:2944e836a9d370f015fd7fc04f4bbc1aaffd5c1b97ef9bffda501f654122aa97"
+  digest = "1:89ca0bf32fecc18680bed8be86577e89a7d22fd570c632642c467fecb0091fca"
   name = "github.com/caicloud/go-common"
   packages = [
     "interfaces",
     "kubernetes/client",
+    "kubernetes/leaderelection",
+    "signal",
     "version",
   ]
   pruneopts = "UT"
@@ -674,10 +676,11 @@
   version = "kubernetes-1.14.2"
 
 [[projects]]
-  digest = "1:961abc41dfa5e1cebc786b794f74c5b4feb53ccd16e118b42ec115f50b2492af"
+  digest = "1:41ced69e3fb3854a5c2981c8ea72492da4cede9240fd2453726c60c8b8a73ab5"
   name = "k8s.io/apiserver"
   packages = [
     "pkg/features",
+    "pkg/server/healthz",
     "pkg/util/feature",
   ]
   pruneopts = "UT"
@@ -685,7 +688,7 @@
   version = "kubernetes-1.14.2"
 
 [[projects]]
-  digest = "1:1f45c02e6bc890e6ed0c1b9acba4ec11d90b139cdc876950b89c4bee2fd1c3b9"
+  digest = "1:f87bc8d03616dd914b9b0659d537b5c66e92815535bb87b63f482324a9841633"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -823,6 +826,8 @@
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
+    "tools/leaderelection",
+    "tools/leaderelection/resourcelock",
     "tools/metrics",
     "tools/pager",
     "tools/reference",
@@ -867,12 +872,12 @@
   source = "github.com/caicloud/helm"
 
 [[projects]]
-  digest = "1:c283ca5951eb7d723d3300762f96ff94c2ea11eaceb788279e2b7327f92e4f2a"
+  digest = "1:72fd56341405f53c745377e0ebc4abeff87f1a048e0eea6568a20212650f5a82"
   name = "k8s.io/klog"
   packages = ["."]
   pruneopts = "UT"
-  revision = "d98d8acdac006fb39831f1b25640813fef9c314f"
-  version = "v0.3.3"
+  revision = "71442cd4037d612096940ceb0f3fec3f7fff66e0"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -997,6 +1002,7 @@
     "github.com/caicloud/clientset/util/syncqueue",
     "github.com/caicloud/go-common/interfaces",
     "github.com/caicloud/go-common/kubernetes/client",
+    "github.com/caicloud/go-common/kubernetes/leaderelection",
     "github.com/caicloud/go-common/version",
     "github.com/caicloud/rudder-client/status",
     "github.com/caicloud/rudder-client/status/universal",
