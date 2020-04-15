@@ -56,7 +56,7 @@ func startReleaseController(ctx ControllerContext) error {
 		ctx.KubeClient.ReleaseV1alpha1(),
 		ctx.InformerFactory.Release().V1alpha1().Releases(),
 		ctx.IgnoredKinds,
-		ctx.ResyncPeriod,
+		ctx.ReleaseResyncPeriod,
 	)
 	if err != nil {
 		return err

@@ -35,7 +35,7 @@ func NewReleaseController(
 	releaseClient releasev1alpha1.ReleaseV1alpha1Interface,
 	releaseInformer informerrelease.ReleaseInformer,
 	ignored []schema.GroupVersionKind,
-	reSyncPeriod int32,
+	reSyncPeriod time.Duration,
 ) (*Controller, error) {
 	client, err := kube.NewClientWithCacheLayer(clients, codec, store)
 	if err != nil {
@@ -55,7 +55,7 @@ func NewReleaseController(
 			rc.enqueueRelease(newObj)
 		},
 		DeleteFunc: rc.enqueueRelease,
-	}, time.Duration(reSyncPeriod)*time.Second)
+	}, reSyncPeriod)
 	return rc, nil
 }
 
