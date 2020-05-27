@@ -1,7 +1,8 @@
 package app
 
 import (
-	"context"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/caicloud/rudder/cmd/controller/app/options"
@@ -13,7 +14,6 @@ import (
 	"github.com/caicloud/clientset/kubernetes/scheme"
 	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/go-common/kubernetes/client"
-	"github.com/caicloud/go-common/kubernetes/leaderelection"
 	"github.com/caicloud/go-common/version"
 
 	"github.com/golang/glog"
@@ -55,10 +55,23 @@ type ControllerContext struct {
 	ReleaseResyncPeriod time.Duration
 }
 
+func healthzServer(healthzPort int) {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+	if err := http.ListenAndServe(fmt.Sprintf(":%v", healthzPort), nil); err != nil {
+		glog.Errorf("ListenAndServe: %v", err)
+	}
+}
+
 // Run runs the ReleaseServer. This should never exit.
 func Run(s *options.ReleaseServer) error {
 	glog.Infof("Initialize release server")
 	glog.Infof("Rudder Build Information, %v", version.Get().Pretty())
+
+	// starts a healthz server
+	go healthzServer(s.HealthzPort)
+
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", s.Kubeconfig)
 	if err != nil {
 		return err
@@ -72,53 +85,45 @@ func Run(s *options.ReleaseServer) error {
 		return err
 	}
 
-	leaderelection.RunOrDie(leaderelection.Option{
-		LeaseLockName:      "release-controller",
-		LeaseLockNamespace: "kube-system",
-		KubeClient:         kubeClient,
-		Run: func(_ context.Context) {
-			resources, err := kube.NewAPIResources(kubeClient)
-			if err != nil {
-				klog.Error(err)
-				return
-			}
-			pool, err := kube.NewClientPool(scheme.Scheme, kubeConfig, resources)
-			if err != nil {
-				klog.Error(err)
-				return
-			}
-			stop := wait.NeverStop
-			informerFactory := informers.NewSharedInformerFactory(kubeClient, s.ResyncPeriod)
-			informerStore := store.NewIntegrationStore(resources, informerFactory, stop)
-			ctx := ControllerContext{
-				Options:             *s,
-				Scheme:              scheme.Scheme,
-				Codec:               kube.NewYAMLCodec(scheme.Scheme, scheme.Scheme),
-				Resources:           resources,
-				KubeClient:          kubeClient,
-				ClientPool:          pool,
-				InformerFactory:     informerFactory,
-				InformerStore:       informerStore,
-				AvailableKinds:      AvailableKinds(),
-				IgnoredKinds:        IgnoredKinds(),
-				Stop:                stop,
-				ReleaseResyncPeriod: s.ReleaseResyncPeriod,
-			}
-			initializers, err := NewControllerInitializers(s.Controllers)
-			if err != nil {
-				klog.Error(err)
-				return
-			}
-			err = StartControllers(ctx, initializers)
-			if err != nil {
-				klog.Error(err)
-				return
-			}
-			ctx.InformerFactory.Start(ctx.Stop)
-			<-ctx.Stop
-		},
-		Port: s.HealthzPort,
-	})
+	resources, err := kube.NewAPIResources(kubeClient)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+	pool, err := kube.NewClientPool(scheme.Scheme, kubeConfig, resources)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+	stop := wait.NeverStop
+	informerFactory := informers.NewSharedInformerFactory(kubeClient, s.ResyncPeriod)
+	informerStore := store.NewIntegrationStore(resources, informerFactory, stop)
+	ctx := ControllerContext{
+		Options:             *s,
+		Scheme:              scheme.Scheme,
+		Codec:               kube.NewYAMLCodec(scheme.Scheme, scheme.Scheme),
+		Resources:           resources,
+		KubeClient:          kubeClient,
+		ClientPool:          pool,
+		InformerFactory:     informerFactory,
+		InformerStore:       informerStore,
+		AvailableKinds:      AvailableKinds(),
+		IgnoredKinds:        IgnoredKinds(),
+		Stop:                stop,
+		ReleaseResyncPeriod: s.ReleaseResyncPeriod,
+	}
+	initializers, err := NewControllerInitializers(s.Controllers)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+	err = StartControllers(ctx, initializers)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+	ctx.InformerFactory.Start(ctx.Stop)
+	<-ctx.Stop
 	return nil
 }
 
