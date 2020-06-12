@@ -49,7 +49,9 @@ BASE_REGISTRY ?= cargo.caicloud.xyz/library
 #
 
 # It's necessary to set this because some environments don't link sh -> bash.
-export SHELL     := /bin/bash
+export SHELL := /bin/bash
+
+# It's necessary to set the errexit flags for the bash shell.
 export SHELLOPTS := errexit
 
 # Project main package location (can be multiple ones).
@@ -67,7 +69,7 @@ GITREMOTE    ?= $(shell git remote get-url origin)
 GITCOMMIT    ?= $(shell git rev-parse HEAD)
 GITTREESTATE ?= $(if $(shell git status --porcelain),dirty,clean)
 BUILDDATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-GOCOMMON     := $(ROOT)/vendor/github.com/caicloud/go-common
+GOCOMMON     := $(shell if [ ! -f go.mod ]; then echo $(ROOT)/vendor/; fi)github.com/caicloud/go-common
 
 # Available cpus for compiling, please refer to https://github.com/caicloud/engineering/issues/8186#issuecomment-518656946 for more information.
 CPUS ?= $(shell /bin/bash hack/read_cpus_available.sh)
@@ -112,7 +114,7 @@ build-local:
 	done
 
 build-linux:
-	@docker run --rm -t                                                                \
+	@docker run --rm -it                                                                \
 	  -v $(PWD):/go/src/$(ROOT)                                                        \
 	  -w /go/src/$(ROOT)                                                               \
 	  -e GOOS=linux                                                                    \
