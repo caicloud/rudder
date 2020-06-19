@@ -76,7 +76,8 @@ FOR:
 			if !(target != nil && rel.Spec.RollbackTo == nil &&
 				target.Spec.Config == rel.Spec.Config &&
 				reflect.DeepEqual(target.Spec.Suspend, rel.Spec.Suspend) &&
-				reflect.DeepEqual(target.Spec.Template, rel.Spec.Template)) {
+				reflect.DeepEqual(target.Spec.Template, rel.Spec.Template) &&
+				normalCondition(rel)) {
 				// Config was changed. Add it to queue.
 				target = rel
 				queue.Forget(target.Name)
@@ -87,4 +88,11 @@ FOR:
 	queue.ShutDown()
 
 	glog.V(2).Infof("Stopped handler: %s", getter.Key())
+}
+
+func normalCondition(rel *releaseapi.Release) bool {
+	if len(rel.Status.Conditions) == 0 {
+		return false
+	}
+	return rel.Status.Conditions[0].Type != releaseapi.ReleaseFailure
 }
