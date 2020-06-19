@@ -3,16 +3,18 @@ package app
 import (
 	"time"
 
-	"github.com/caicloud/clientset/informers"
-	"github.com/caicloud/clientset/kubernetes"
-	"github.com/caicloud/clientset/kubernetes/scheme"
-	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
 	"github.com/caicloud/rudder/cmd/controller/app/options"
 	"github.com/caicloud/rudder/pkg/kube"
 	"github.com/caicloud/rudder/pkg/store"
 	"github.com/caicloud/rudder/pkg/version"
-	"github.com/golang/glog"
 
+	"github.com/caicloud/clientset/informers"
+	"github.com/caicloud/clientset/kubernetes"
+	"github.com/caicloud/clientset/kubernetes/scheme"
+	releaseapi "github.com/caicloud/clientset/pkg/apis/release/v1alpha1"
+	"github.com/caicloud/go-common/kubernetes/client"
+
+	"github.com/golang/glog"
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -58,7 +60,7 @@ func Run(s *options.ReleaseServer) error {
 	if err != nil {
 		return err
 	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	kubeClient, err := client.NewFromConfig(kubeConfig)
 	if err != nil {
 		return err
 	}
