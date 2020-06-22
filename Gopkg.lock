@@ -220,7 +220,6 @@
   revision = "f044571b72093f97ddeaeaacb19b1aba8264bfe3"
 
 [[projects]]
-  branch = "release-0.1"
   digest = "1:2944e836a9d370f015fd7fc04f4bbc1aaffd5c1b97ef9bffda501f654122aa97"
   name = "github.com/caicloud/go-common"
   packages = [
@@ -230,6 +229,7 @@
   ]
   pruneopts = "UT"
   revision = "b1089d926236335a601ce6d76d6cb3e5faa245a9"
+  version = "v0.1.10"
 
 [[projects]]
   branch = "master"
