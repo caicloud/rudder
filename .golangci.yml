@@ -1,6 +1,6 @@
 run:
   # concurrency: 2
-  deadline: 5m
+  deadline: 10m
 
 linter-settings:
   goconst:
