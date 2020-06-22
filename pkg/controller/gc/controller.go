@@ -137,7 +137,7 @@ func (r *releaseResources) set(gvk schema.GroupVersionKind, obj runtime.Object) 
 	r.releases[owner.UID] = rs
 }
 
-func (r *releaseResources) remove(gvk schema.GroupVersionKind, obj runtime.Object) {
+func (r *releaseResources) remove(obj runtime.Object) {
 	accessor, ok := obj.(metav1.ObjectMetaAccessor)
 	if !ok {
 		return
@@ -243,12 +243,12 @@ func (rh *resourceEventHandler) OnUpdate(oldObj, newObj interface{}) {
 func (rh *resourceEventHandler) OnDelete(obj interface{}) {
 	if d, ok := obj.(cache.DeletedFinalStateUnknown); ok {
 		if o, ok := d.Obj.(runtime.Object); ok {
-			rh.resources.remove(rh.gvk, o)
+			rh.resources.remove(o)
 		}
 		return
 	}
 	if o, ok := obj.(runtime.Object); ok {
-		rh.resources.remove(rh.gvk, o)
+		rh.resources.remove(o)
 	}
 }
 
@@ -364,7 +364,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 			// the manifest should not be empty. If the manifest be empty, release may not be latest,
 			// ignore this performing.
 			if release.Status.Manifest == "" {
-				glog.Warning("release(%s/%s)'s manifest is empty, ignore", release.Namespace, release.Name)
+				glog.Warningf("release(%s/%s)'s manifest is empty, ignore", release.Namespace, release.Name)
 				return nil
 			}
 			resources := render.SplitManifest(release.Status.Manifest)
@@ -408,118 +408,11 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 				glog.Errorf("Can't delete resource %s/%s[%s]: %v", res.namespace, res.name, res.uid, err)
 				return err
 			}
-			gc.resources.remove(res.gvk, res.object)
+			gc.resources.remove(res.object)
 			glog.V(2).Infof("Delete resource %s %s/%s[%s] successfully", res.gvk.Kind, res.namespace, res.name, res.uid)
 			glog.V(2).Infof("Relevant release %s/%s desired resource [%v]", release.Namespace, release.Name, desired)
 		}
 	}
+
 	return nil
 }
-
-// collect handles existent resources. So it doesn't handle deletion events.
-// func (gc *GarbageCollector) collect(gvk schema.GroupVersionKind, obj runtime.Object) {
-//     if gc.ignore(gvk) {
-//         return
-//     }
-//     accessor, err := gc.codec.AccessorForObject(obj)
-//     if err != nil {
-//         glog.Errorf("Can't find out the accessor for resource: %v", err)
-//         return
-//     }
-//     owners := accessor.GetOwnerReferences()
-//     if len(owners) <= 0 || len(owners) >= 2 {
-//         // If the resource have no owner reference or have two or more references,
-//         // we can't handle it.
-//         // Even if the resource have a reference to a release, we leave it to the
-//         // other owners.
-//         // We can call the behavior as reference counter.
-//         return
-//     }
-//     owner := owners[0]
-//     if !(owner.APIVersion == gvkRelease.GroupVersion().String() && owner.Kind == gvkRelease.Kind) {
-//         // If the owner is not release, we don't need handle it.
-//         return
-//     }
-//
-//     releaseObj, err := gc.releaseLister.ByNamespace(accessor.GetNamespace()).Get(owner.Name)
-//     if err != nil && !errors.IsNotFound(err) {
-//         glog.Errorf("Can't find release %s refered by resource %s/%s: %v", owner.Name, accessor.GetNamespace(), accessor.GetName(), err)
-//         return
-//     }
-//     var release *releaseapi.Release
-//     if obj != nil {
-//         release = releaseObj.(*releaseapi.Release)
-//     }
-//
-//     client, err := gc.clients.ClientFor(gvk, accessor.GetNamespace())
-//     if err != nil {
-//         glog.Errorf("Can't get a client for resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
-//         return
-//     }
-//
-//     // A resource which conforms to one of following rules will be deleted:
-//     // 1. Target release is nonexistent (release history only can trigger the rule).
-//     // 2. The release is available and the resource is not in the manifest of release.
-//
-//     policy := metav1.DeletePropagationBackground
-//     uid := accessor.GetUID()
-//     options := &metav1.DeleteOptions{
-//         PropagationPolicy: &policy,
-//         // Fix wrong deletion of object.
-//         Preconditions: &metav1.Preconditions{&uid},
-//     }
-//
-//     if release == nil || release.GetUID() != owner.UID {
-//         // Log the release info.
-//         if release != nil {
-//             glog.V(4).Infof("%+v", release)
-//         }
-//         glog.V(4).Infof("%+v", obj)
-//
-//         // Delete the resource if its target release is not exist.
-//         err = client.Delete(accessor.GetName(), options)
-//         if err != nil {
-//             if errors.IsNotFound(err) {
-//                 glog.Errorf("Can't delete resource %s/%s: %s was deleted", accessor.GetNamespace(), accessor.GetName(), accessor.GetUID())
-//             } else {
-//                 glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
-//             }
-//             return
-//         }
-//         glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
-//         return
-//     }
-//     if gvk == gvkReleaseHistory {
-//         // Ignore release history
-//         return
-//     }
-//
-//     // Check whether the release is available.
-//     if !gc.isAvailable(release) {
-//         return
-//     }
-//
-//     resources := render.SplitManifest(release.Status.Manifest)
-//     objs, accessors, err := gc.codec.AccessorsForResources(resources)
-//     if err != nil && !errors.IsNotFound(err) {
-//         glog.Errorf("Can't decode manifest of release %s/%s: %v", release.Namespace, release.Name, err)
-//         return
-//     }
-//     // Find resource
-//     found := false
-//     for i, obj := range objs {
-//         if obj.GetObjectKind().GroupVersionKind() == gvk && accessor.GetName() == accessors[i].GetName() {
-//             found = true
-//             break
-//         }
-//     }
-//     if !found {
-//         err = client.Delete(accessor.GetName(), options)
-//         if err != nil && !errors.IsNotFound(err) {
-//             glog.Errorf("Can't delete resource %s/%s: %v", accessor.GetNamespace(), accessor.GetName(), err)
-//             return
-//         }
-//         glog.V(2).Infof("Delete resource %s %s/%s successfully", gvk.Kind, accessor.GetNamespace(), accessor.GetName())
-//         return
-//     }
-// }

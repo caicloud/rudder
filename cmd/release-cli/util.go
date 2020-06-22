@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/caicloud/clientset/kubernetes"
+
 	"github.com/ghodss/yaml"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -57,22 +58,22 @@ func archive(chart *chart.Chart) ([]byte, error) {
 	// It makes no sense when error occurs.
 	// But close before returning for obeying code convention.
 	// Don't defer the execution of Close().
-	twriter.Close()
-	zipper.Close()
+	_ = twriter.Close()
+	_ = zipper.Close()
 	if err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-// Unarchive unarchives data to chart
-func Unarchive(data []byte) (*chart.Chart, error) {
-	result, err := chartutil.LoadArchive(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
+//// Unarchive unarchives data to chart
+//func Unarchive(data []byte) (*chart.Chart, error) {
+//	result, err := chartutil.LoadArchive(bytes.NewReader(data))
+//	if err != nil {
+//		return nil, err
+//	}
+//	return result, nil
+//}
 
 // writeTarContents writes a chart to tar package
 // Copy from: k8s.io/helm/pkg/chartutil/save.go

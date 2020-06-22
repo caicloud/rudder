@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/caicloud/rudder/pkg/render"
+
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
@@ -52,7 +53,7 @@ func runLint(cmd *cobra.Command, args []string) {
 	}
 
 	r := render.NewRender()
-	c, err := r.Render(&render.RenderOptions{
+	c, err := r.Render(&render.Options{
 		Namespace: "default",
 		Release:   "release-name",
 		Version:   1,
@@ -108,7 +109,7 @@ func valuesPath(values string) (map[string][]string, error) {
 	result := map[string][]string{}
 	for k, ts := range types {
 		arr := result[k]
-		for t, _ := range ts {
+		for t := range ts {
 			arr = append(arr, t)
 		}
 		result[k] = arr
@@ -151,7 +152,7 @@ func mergeMap(dst, src map[string]map[string]bool) {
 		if types == nil {
 			types = v
 		} else {
-			for t, _ := range v {
+			for t := range v {
 				types[t] = true
 			}
 		}

@@ -12,14 +12,14 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-type ReleaseAction string
+type Action string
 
 const (
-	ReleaseNothing  ReleaseAction = "ReleaseNothing"
-	ReleaseCreate   ReleaseAction = "ReleaseCreate"
-	ReleaseUpdate   ReleaseAction = "ReleaseUpdate"
-	ReleaseRollback ReleaseAction = "ReleaseRollback"
-	ReleaseDelete   ReleaseAction = "ReleaseDelete"
+	ReleaseNothing  Action = "ReleaseNothing"
+	ReleaseCreate   Action = "ReleaseCreate"
+	ReleaseUpdate   Action = "ReleaseUpdate"
+	ReleaseRollback Action = "ReleaseRollback"
+	ReleaseDelete   Action = "ReleaseDelete"
 )
 
 type releaseContext struct {
@@ -70,7 +70,7 @@ func (rc *releaseContext) handle(ctx context.Context, backend storage.ReleaseSto
 FOR:
 	for {
 		select {
-		case _ = <-ctx.Done():
+		case <-ctx.Done():
 			break FOR
 		case rel := <-getter.Get():
 			if !(target != nil && rel.Spec.RollbackTo == nil &&

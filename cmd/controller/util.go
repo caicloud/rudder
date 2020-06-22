@@ -21,8 +21,8 @@ func InitFlags() {
 }
 
 func init() {
-	flag.CommandLine.Parse([]string{})
-	flag.Set("logtostderr", "true")
+	_ = flag.CommandLine.Parse([]string{})
+	_ = flag.Set("logtostderr", "true")
 }
 
 // InitLogs initializes logs the way we want for kubernetes.

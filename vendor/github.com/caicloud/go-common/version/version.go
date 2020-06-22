@@ -7,8 +7,6 @@ import (
 )
 
 // Info contains versioning information.
-// TODO: Add []string of api versions supported? It's still unclear
-// how we'll want to distribute that information.
 type Info struct {
 	Version      string `json:"version"`
 	GitRemote    string `json:"gitRemote"`
@@ -26,6 +24,7 @@ func (info Info) Pretty() string {
 	return string(str)
 }
 
+// String returns the marshalled json string of Info
 func (info Info) String() string {
 	str, _ := json.Marshal(info)
 	return string(str)
@@ -35,7 +34,7 @@ func (info Info) String() string {
 // what code a binary was built from.
 func Get() Info {
 	// These variables typically come from -ldflags settings and in
-	// their absence fallback to the settings in pkg/version/base.go
+	// their absence fallback to the settings in version/base.go
 	return Info{
 		Version:      version,
 		GitRemote:    gitRemote,
