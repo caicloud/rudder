@@ -112,6 +112,8 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		release.Status.Manifest = render.MergeResources(manifests)
 		postUpdate = true
 	}
+	// FIXME: when the number of failure larger than 3 which set int function handler, the resource will apply failed and the
+	// resource can not be consistent with the Spec.Config
 	// Apply resources.
 	if err := rc.client.Apply(release.Namespace, manifests, kube.ApplyOptions{
 		OwnerReferences: referencesForRelease(release),
