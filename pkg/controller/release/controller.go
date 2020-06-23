@@ -36,7 +36,7 @@ func NewReleaseController(
 	releaseInformer informerrelease.ReleaseInformer,
 	ignored []schema.GroupVersionKind,
 	reSyncPeriod time.Duration,
-) (*ReleaseController, error) {
+) (*Controller, error) {
 	client, err := kube.NewClientWithCacheLayer(clients, codec, store)
 	if err != nil {
 		return nil, err
