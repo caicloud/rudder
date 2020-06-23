@@ -18,6 +18,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 	release = release.DeepCopy()
 
 	var manifests []string
+	var postUpdate bool
 	if release.Spec.RollbackTo != nil {
 		glog.V(4).Infof("Rollback release %s/%s to %v", release.Namespace, release.Name, release.Spec.RollbackTo.Version)
 		// Rollback.
@@ -109,14 +110,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 
 		manifests = carrier.Resources()
 		release.Status.Manifest = render.MergeResources(manifests)
-
-		glog.V(4).Infof("Update manifest of release %s/%s for version %d", release.Namespace, release.Name, release.Status.Version)
-		_, err = backend.Update(release)
-		if err != nil {
-			glog.Errorf("Failed to update release %s/%s: %v", release.Namespace, release.Name, err)
-			return recordError(backend, err)
-		}
-
+		postUpdate = true
 	}
 	// Apply resources.
 	if err := rc.client.Apply(release.Namespace, manifests, kube.ApplyOptions{
@@ -126,6 +120,18 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 		glog.Infof("Failed to apply resources for release %s/%s: %v", release.Namespace, release.Name, err)
 		return recordError(backend, err)
 	}
+
+	// Updates release after applying the manifests, otherwise the resource applied by manifests
+	// can not be consistent with the manifests when release updated successfully and apply failed.
+	if postUpdate {
+		glog.V(4).Infof("Update manifest of release %s/%s for version %d", release.Namespace, release.Name, release.Status.Version)
+		_, err := backend.Update(release)
+		if err != nil {
+			glog.Errorf("Failed to update release %s/%s: %v", release.Namespace, release.Name, err)
+			return recordError(backend, err)
+		}
+	}
+
 	_, err := backend.FlushConditions(storage.Condition(storage.ReleaseReasonAvailable, ""))
 	if err != nil {
 		return err
