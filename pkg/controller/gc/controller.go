@@ -428,12 +428,14 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 	return nil
 }
 
-// ifRetainHistory tell if retain the release history.
-// It will retain the history which between [curVersion - historyLimit + 1: + infinity).
-// Why don't use (latestVersion - historyLimit), if you want acquire latestVersion, you need list all histories
-// first, that's not graceful. On the other hand in a sentence, the current policy also satisfies the demand of limit
-// history number because the current version will be equal with the latest version after updating the release.
+// ifRetainHistory tell if retain the release history. It will retain the history which between
+// [curVersion - historyLimit + 1: + infinity). Why don't use (latestVersion - historyLimit), if
+// you want acquire latestVersion, you need list all histories first which is not graceful. On the
+// other hand in a sentence, the current policy also satisfies the demand of limit history number
+// because the current version will be equal with the latest version after updating the release.
 func (gc *GarbageCollector) ifRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
+	// The rls name may be "hello" and rlsHistory name be "hellowe12-v0", the first validation will ignore it.
+	// But when invoke `strconv.Atoi` the digit string "12-v0" will failed. So it is still invalid.
 	if !strings.HasPrefix(rlsHistoryName, rls.Name) {
 		return false, fmt.Errorf("cur rlshistory %v is not belong the rls %v", rlsHistoryName, rls.Name)
 	}
