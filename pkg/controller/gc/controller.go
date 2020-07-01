@@ -1,6 +1,9 @@
 package gc
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -175,19 +178,22 @@ type GarbageCollector struct {
 	ignored       []schema.GroupVersionKind // indicates which resources should be ignored
 	workers       int32
 	working       int32
+	historyLimit  int32
 }
 
 // NewGarbageCollector creates a garbage collector.
 func NewGarbageCollector(clients kube.ClientPool, codec kube.Codec,
 	store store.IntegrationStore, targets, ignored []schema.GroupVersionKind,
+	historyLimit int32,
 ) (*GarbageCollector, error) {
 	gc := &GarbageCollector{
-		clients:   clients,
-		codec:     codec,
-		store:     store,
-		resources: newReleaseResources(ignored),
-		queue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		ignored:   ignored,
+		clients:      clients,
+		codec:        codec,
+		store:        store,
+		resources:    newReleaseResources(ignored),
+		queue:        workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		ignored:      ignored,
+		historyLimit: historyLimit,
 	}
 	releaseInformer, err := store.InformerFor(gvkRelease)
 	if err != nil {
@@ -385,7 +391,12 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 		switch {
 		case res.gvk == gvkReleaseHistory:
 			// Check history
-			if releaseAlived {
+			isRetain, err := gc.isRetainHistory(release, res.name)
+			if err != nil {
+				glog.Errorf("get retain info for resource %s/%s failed %v", res.namespace, res.name, err)
+				return err
+			}
+			if releaseAlived && isRetain {
 				continue
 			}
 			fallthrough
@@ -415,4 +426,27 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 	}
 
 	return nil
+}
+
+// isRetainHistory tell if retain the release history.
+// It will retain the history which between [curVersion - historyLimit + 1: + infinity).
+// Why don't use (latestVersion - historyLimit), because if you want acquire latestVersion, you need list all histories
+// first, that's not graceful. On the other hand in a sentence, the current policy also satisfies the demand of limit
+// history number because the current version will be equal with the latest version after updating the release.
+func (gc *GarbageCollector) isRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
+	if strings.Index(rlsHistoryName, rls.Name) == -1 {
+		return false, fmt.Errorf("cur rlshistory %v is not belong the rls %v", rlsHistoryName, rls.Name)
+	}
+	version, err := strconv.Atoi(rlsHistoryName[len(rls.Name)+2:])
+	if err != nil {
+		return false, err
+	}
+	if version <= 0 {
+		return false, fmt.Errorf("cur rlshistory %v version %v is  invalid", rlsHistoryName, version)
+	}
+	rlsVersion := int(rls.Status.Version)
+	if version+int(gc.historyLimit) > rlsVersion {
+		return true, nil
+	}
+	return false, nil
 }
