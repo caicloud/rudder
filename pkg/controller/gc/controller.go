@@ -437,17 +437,17 @@ func (gc *GarbageCollector) ifRetainHistory(rls *releaseapi.Release, rlsHistoryN
 	// The rls name may be "hello" and rlsHistory name be "hellowe12-v0", the first validation will ignore it.
 	// But when invoke `strconv.Atoi` the digit string "12-v0" will failed. So it is still invalid.
 	if !strings.HasPrefix(rlsHistoryName, rls.Name) {
-		return false, fmt.Errorf("cur rlshistory %v is not belong the rls %v", rlsHistoryName, rls.Name)
+		return false, fmt.Errorf("cur release history %v is not belong the release %v", rlsHistoryName, rls.Name)
 	}
+	// the "-v" occupy two byte
 	version, err := strconv.Atoi(rlsHistoryName[len(rls.Name)+2:])
 	if err != nil {
 		return false, err
 	}
 	if version <= 0 {
-		return false, fmt.Errorf("cur rlshistory %v version %v is  invalid", rlsHistoryName, version)
+		return false, fmt.Errorf("cur release history %v version %v is  invalid", rlsHistoryName, version)
 	}
-	rlsVersion := int(rls.Status.Version)
-	if version+int(gc.historyLimit) > rlsVersion {
+	if version+int(gc.historyLimit) > int(rls.Status.Version) {
 		return true, nil
 	}
 	return false, nil

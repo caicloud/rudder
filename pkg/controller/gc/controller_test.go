@@ -34,8 +34,8 @@ func TestIsRetainHistory(t *testing.T) {
 	}{
 		{"hello", 3, "hello-v1", true, nil},
 		{"hello", 10, "hello-v1", false, nil},
-		{"hello", 3, "hello-v0", false, fmt.Errorf("cur rlshistory hello-v0 version 0 is  invalid")},
-		{"hello", 3, "hello-v-9", false, fmt.Errorf("cur rlshistory hello-v-9 version -9 is  invalid")},
+		{"hello", 3, "hello-v0", false, fmt.Errorf("cur release history hello-v0 version 0 is  invalid")},
+		{"hello", 3, "hello-v-9", false, fmt.Errorf("cur release history hello-v-9 version -9 is  invalid")},
 		{"hello", 10, "hello-v5", false, nil},
 		{"hello", 10, "hello-v6", true, nil},
 		{"hello", 10, "hello1-v6", false, nil},
