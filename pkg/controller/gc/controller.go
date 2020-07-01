@@ -430,7 +430,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 
 // isRetainHistory tell if retain the release history.
 // It will retain the history which between [curVersion - historyLimit + 1: + infinity).
-// Why don't use (latestVersion - historyLimit), because if you want acquire latestVersion, you need list all histories
+// Why don't use (latestVersion - historyLimit), if you want acquire latestVersion, you need list all histories
 // first, that's not graceful. On the other hand in a sentence, the current policy also satisfies the demand of limit
 // history number because the current version will be equal with the latest version after updating the release.
 func (gc *GarbageCollector) isRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
