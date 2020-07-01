@@ -41,7 +41,7 @@ func TestIsRetainHistory(t *testing.T) {
 	}
 
 	for _, ca := range testCases {
-		get, err := gc.isRetainHistory(newRelease(ca.rls, ca.curVersion), ca.rlsHistory)
+		get, err := gc.ifRetainHistory(newRelease(ca.rls, ca.curVersion), ca.rlsHistory)
 		if reflect.DeepEqual(err, ca.want) || get != ca.want {
 			t.Errorf("limit %v got %v but condition is %v err %v", gc.historyLimit, get, ca, err)
 		}

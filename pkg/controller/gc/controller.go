@@ -391,12 +391,12 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 		switch {
 		case res.gvk == gvkReleaseHistory:
 			// Check history
-			isRetain, err := gc.isRetainHistory(release, res.name)
+			ifRetain, err := gc.ifRetainHistory(release, res.name)
 			if err != nil {
 				glog.Errorf("get retain info for resource %s/%s failed %v", res.namespace, res.name, err)
 				return err
 			}
-			if releaseAlived && isRetain {
+			if releaseAlived && ifRetain {
 				continue
 			}
 			fallthrough
@@ -428,12 +428,12 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 	return nil
 }
 
-// isRetainHistory tell if retain the release history.
+// ifRetainHistory tell if retain the release history.
 // It will retain the history which between [curVersion - historyLimit + 1: + infinity).
 // Why don't use (latestVersion - historyLimit), if you want acquire latestVersion, you need list all histories
 // first, that's not graceful. On the other hand in a sentence, the current policy also satisfies the demand of limit
 // history number because the current version will be equal with the latest version after updating the release.
-func (gc *GarbageCollector) isRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
+func (gc *GarbageCollector) ifRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
 	if strings.Index(rlsHistoryName, rls.Name) == -1 {
 		return false, fmt.Errorf("cur rlshistory %v is not belong the rls %v", rlsHistoryName, rls.Name)
 	}
