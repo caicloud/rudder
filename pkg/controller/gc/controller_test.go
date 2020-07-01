@@ -39,6 +39,8 @@ func TestIsRetainHistory(t *testing.T) {
 		{"hello", 10, "hello-v5", false, nil},
 		{"hello", 10, "hello-v6", true, nil},
 		{"hello", 10, "hello1-v6", false, nil},
+		{"hello", 10, "hello-v20", true, nil},
+		{"hello", 10, "hello1-v20", false, nil},
 	}
 
 	for _, ca := range testCases {
