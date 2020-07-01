@@ -434,7 +434,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 // first, that's not graceful. On the other hand in a sentence, the current policy also satisfies the demand of limit
 // history number because the current version will be equal with the latest version after updating the release.
 func (gc *GarbageCollector) ifRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
-	if strings.Index(rlsHistoryName, rls.Name) == -1 {
+	if !strings.HasPrefix(rlsHistoryName, rls.Name) {
 		return false, fmt.Errorf("cur rlshistory %v is not belong the rls %v", rlsHistoryName, rls.Name)
 	}
 	version, err := strconv.Atoi(rlsHistoryName[len(rls.Name)+2:])
