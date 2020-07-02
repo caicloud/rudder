@@ -28,6 +28,10 @@ type ReleaseServer struct {
 	ReleaseResyncPeriod time.Duration
 
 	HealthzPort int
+
+	// The number of releaseHistory to retain to allow rollback.
+	// Defaults to 50.
+	HistoryLimit int32
 }
 
 // NewReleaseServer creates a new CMServer with a default config.
@@ -50,4 +54,5 @@ func (s *ReleaseServer) AddFlags(fs *pflag.FlagSet, allControllers []string) {
 	fs.DurationVar(&s.ResyncPeriod, "resync-period", s.ResyncPeriod, "ResyncPeriod describes the period of informer resync")
 	fs.DurationVar(&s.ReleaseResyncPeriod, "handler-resync-period", s.ReleaseResyncPeriod, "ReleaseResyncPeriod is the resync period to invoke informer event handler")
 	fs.IntVar(&s.HealthzPort, "healthz-port", 8080, "The port of the localhost healthz endpoint")
+	fs.Int32Var(&s.HistoryLimit, "history-limit", 50, "The number of releaseHistory to retain to allow rollback")
 }
