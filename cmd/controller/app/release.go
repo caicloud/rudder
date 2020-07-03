@@ -50,11 +50,15 @@ type ControllerContext struct {
 	Stop <-chan struct{}
 	// ReleaseResyncPeriod is the resync period to invoke informer event handler for release
 	ReleaseResyncPeriod time.Duration
+	// The number of releaseHistory to retain to allow rollback.
+	// Defaults to 50.
+	HistoryLimit int32
 }
 
 // Run runs the ReleaseServer. This should never exit.
 func Run(s *options.ReleaseServer) error {
 	glog.Infof("Initialize release server")
+	glog.Infof("Retain release history number %v", s.HistoryLimit)
 	glog.Infof("Rudder Build Information, %v", version.Get().Pretty())
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", s.Kubeconfig)
 	if err != nil {
@@ -92,6 +96,7 @@ func Run(s *options.ReleaseServer) error {
 		IgnoredKinds:        IgnoredKinds(),
 		Stop:                stop,
 		ReleaseResyncPeriod: s.ReleaseResyncPeriod,
+		HistoryLimit:        s.HistoryLimit,
 	}
 	initializers, err := NewControllerInitializers(s.Controllers)
 	if err != nil {
