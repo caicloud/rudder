@@ -26,6 +26,10 @@ type ReleaseServer struct {
 	ResyncPeriod time.Duration
 	// ReleaseResyncPeriod is the resync period to invoke informer event handler.
 	ReleaseResyncPeriod time.Duration
+
+	// The number of releaseHistory to retain to allow rollback.
+	// Defaults to 50.
+	HistoryLimit int32
 }
 
 // NewReleaseServer creates a new CMServer with a default config.
@@ -47,4 +51,5 @@ func (s *ReleaseServer) AddFlags(fs *pflag.FlagSet, allControllers []string) {
 	fs.Int32Var(&s.ConcurrentStatusSyncs, "concurrent-status-syncs", s.ConcurrentStatusSyncs, "The number of status controller worker that are allowed to sync concurrently")
 	fs.DurationVar(&s.ResyncPeriod, "resync-period", s.ResyncPeriod, "ResyncPeriod describes the period of informer resync")
 	fs.DurationVar(&s.ReleaseResyncPeriod, "handler-resync-period", s.ReleaseResyncPeriod, "ReleaseResyncPeriod is the resync period to invoke informer event handler")
+	fs.Int32Var(&s.HistoryLimit, "history-limit", 50, "The number of releaseHistory to retain to allow rollback")
 }
