@@ -1,6 +1,9 @@
 package gc
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -165,28 +168,25 @@ type GarbageCollector struct {
 	releaseLister cache.GenericLister
 	resources     *releaseResources
 	synced        []cache.InformerSynced
-	// ignored indicates which resources should be ignored
-	ignored []schema.GroupVersionKind
-	workers int32
-	working int32
+	ignored       []schema.GroupVersionKind // indicates which resources should be ignored
+	workers       int32
+	working       int32
+	historyLimit  int32
 }
 
 // NewGarbageCollector creates a garbage collector.
-func NewGarbageCollector(
-	clients kube.ClientPool,
-	codec kube.Codec,
-	store store.IntegrationStore,
-	targets []schema.GroupVersionKind,
-	ignored []schema.GroupVersionKind,
+func NewGarbageCollector(clients kube.ClientPool, codec kube.Codec,
+	store store.IntegrationStore, targets, ignored []schema.GroupVersionKind,
+	historyLimit int32,
 ) (*GarbageCollector, error) {
 	gc := &GarbageCollector{
-		clients:   clients,
-		codec:     codec,
-		store:     store,
-		resources: newReleaseResources(ignored),
-		queue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		synced:    []cache.InformerSynced{},
-		ignored:   ignored,
+		clients:      clients,
+		codec:        codec,
+		store:        store,
+		resources:    newReleaseResources(ignored),
+		queue:        workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		ignored:      ignored,
+		historyLimit: historyLimit,
 	}
 	releaseInformer, err := store.InformerFor(gvkRelease)
 	if err != nil {
@@ -385,7 +385,12 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 		switch {
 		case res.gvk == gvkReleaseHistory:
 			// Check history
-			if releaseAlived {
+			ifRetain, err := gc.ifRetainHistory(release, res.name)
+			if err != nil {
+				glog.Errorf("get retain info for resource %s/%s failed %v", res.namespace, res.name, err)
+				return err
+			}
+			if releaseAlived && ifRetain {
 				continue
 			}
 			fallthrough
@@ -543,4 +548,30 @@ func (gc *GarbageCollector) isAvailable(release *releaseapi.Release) bool {
 	}
 	conditionsLen := len(release.Status.Conditions)
 	return conditionsLen > 0 && release.Status.Conditions[conditionsLen-1].Type == releaseapi.ReleaseAvailable
+}
+
+// ifRetainHistory tell if retain the release history, it will retain the history which between
+// (latestVersion-historyLimit : latestVersion] actually.
+// Why don't use latestVersion as parameter directly, if you want acquire latestVersion, you need
+// list all histories first which is not graceful. On the other hand in a sentence, the current
+// policy also satisfies the demand of limiting history number because the current version will be
+// equal with the latest version after updating the release.
+func (gc *GarbageCollector) ifRetainHistory(rls *releaseapi.Release, rlsHistoryName string) (bool, error) {
+	// The rls name may be "hello" and rlsHistory name be "hellowe12-v0", the first validation will ignore it.
+	// But when invoke `strconv.Atoi` the digit string "12-v0" will failed. So it is still invalid.
+	if !strings.HasPrefix(rlsHistoryName, rls.Name) {
+		return false, fmt.Errorf("cur release history %v is not belong the release %v", rlsHistoryName, rls.Name)
+	}
+	// the "-v" occupy two byte
+	version, err := strconv.Atoi(rlsHistoryName[len(rls.Name)+2:])
+	if err != nil {
+		return false, err
+	}
+	if version <= 0 {
+		return false, fmt.Errorf("cur release history %v version %v is  invalid", rlsHistoryName, version)
+	}
+	if version+int(gc.historyLimit) > int(rls.Status.Version) {
+		return true, nil
+	}
+	return false, nil
 }

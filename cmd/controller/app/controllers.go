@@ -90,6 +90,7 @@ func startGCController(ctx ControllerContext) error {
 		ctx.InformerStore,
 		ctx.AvailableKinds,
 		ctx.IgnoredKinds,
+		ctx.HistoryLimit,
 	)
 	if err != nil {
 		return err
