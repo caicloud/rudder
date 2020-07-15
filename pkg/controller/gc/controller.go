@@ -365,7 +365,7 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 			// the manifest should not be empty. If the manifest be empty, release may not be latest,
 			// ignore this performing.
 			if release.Status.Manifest == "" {
-				glog.Warning("release(%s/%s)'s manifest is empty, ignore", release.Namespace, release.Name)
+				glog.Warningf("release(%s/%s)'s manifest is empty, ignore", release.Namespace, release.Name)
 				return nil
 			}
 			resources := render.SplitManifest(release.Status.Manifest)
