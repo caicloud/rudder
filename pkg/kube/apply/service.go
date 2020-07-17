@@ -17,6 +17,8 @@ func applyService(current, desired runtime.Object) error {
 	do := desired.(*core.Service)
 	do.ResourceVersion = co.ResourceVersion
 	do.Spec.ClusterIP = co.Spec.ClusterIP
+	// merge annotations
+	do.Annotations = mergeAnnotations(co.Annotations, do.Annotations)
 	if do.Spec.Type == core.ServiceTypeNodePort &&
 		co.Spec.Type == core.ServiceTypeNodePort {
 		portsMap := map[int32]int32{}
@@ -34,4 +36,25 @@ func applyService(current, desired runtime.Object) error {
 		}
 	}
 	return nil
+}
+
+// mergeAnnotations merge current annotations with desired annotations
+// with mergeAnnotations, it will retain current annotations set by users manually
+// for example, kong ingress will set annotations on service to implement it's functions
+func mergeAnnotations(current, desired map[string]string) map[string]string {
+	// no annotations on current service
+	if current == nil {
+		return desired
+	}
+	if desired == nil {
+		return current
+	}
+	for key, value := range current {
+		if _, ok := desired[key]; ok {
+			// use desired value for the same key
+			continue
+		}
+		desired[key] = value
+	}
+	return desired
 }
