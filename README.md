@@ -16,6 +16,7 @@ Learn more about rudder on [design doc](docs/design.md)
 
 | Branch      | Compass |
 | ----------- | ------- |
+| release-0.5 | 2.11.x  |
 | release-0.4 | 2.9.x   |
 | release-0.3 | 2.8.x   |
 
