@@ -129,7 +129,7 @@ build-linux:
 	  -e GOARCH=$(ARCH)                                                                \
 	  -e GOPATH=/go                                                                    \
 	  -e SHELLOPTS=$(SHELLOPTS)                                                        \
-	  $(BASE_REGISTRY)/golang:1.10.4-stretch                                           \
+	  $(BASE_REGISTRY)/golang:1.10-security                                            \
 	    /bin/bash -c 'for target in $(TARGETS_BINARY); do                              \
 	      go build -i -v -o $(OUTPUT_DIR)/$${target} -p $(CPUS)                        \
 	        -ldflags "-s -w -X $(GOCOMMON)/version.version=$(VERSION)                  \
