@@ -30,11 +30,12 @@ var gvkRelease = releaseapi.SchemeGroupVersion.WithKind("Release")
 var gvkReleaseHistory = releaseapi.SchemeGroupVersion.WithKind("ReleaseHistory")
 
 type resource struct {
-	gvk       schema.GroupVersionKind
-	namespace string
-	name      string
-	uid       types.UID
-	object    runtime.Object
+	gvk               schema.GroupVersionKind
+	namespace         string
+	name              string
+	uid               types.UID
+	creationTimestamp metav1.Time
+	object            runtime.Object
 }
 
 type release struct {
@@ -131,11 +132,12 @@ func (r *releaseResources) set(gvk schema.GroupVersionKind, obj runtime.Object) 
 		}
 	}
 	rs.resources[meta.GetUID()] = &resource{
-		gvk:       gvk,
-		namespace: meta.GetNamespace(),
-		name:      meta.GetName(),
-		uid:       meta.GetUID(),
-		object:    obj,
+		gvk:               gvk,
+		namespace:         meta.GetNamespace(),
+		name:              meta.GetName(),
+		uid:               meta.GetUID(),
+		creationTimestamp: meta.GetCreationTimestamp(),
+		object:            obj,
 	}
 	r.releases[owner.UID] = rs
 }
@@ -385,9 +387,18 @@ func (gc *GarbageCollector) collect(release *releaseapi.Release) error {
 			releaseAlived = true
 		}
 	}
-
+	now := time.Now()
 	resources := gc.resources.resources(release.UID)
 	for _, res := range resources {
+		// The res mey be deleted by mistake when new resources were created but the
+		// release.status.manifest has not been updated. So we retain the resources who's
+		// lifecycle are less than 3 second to wait for the updating of release.status.
+		// FIXME: the lifecycle can't guarantee the mistake deleting, but can reduce it.
+		lifecycle := now.Sub(res.creationTimestamp.Time)
+		if lifecycle <= time.Second*3 {
+			glog.Warningf("res %s/%s is too young, should remain to observed", res.namespace, res.name)
+			continue
+		}
 		switch {
 		case res.gvk == gvkReleaseHistory:
 			// Check history
