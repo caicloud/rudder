@@ -16,6 +16,7 @@ import (
 func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *releaseapi.Release) error {
 	// Deep copy release. Avoid modifying original release.
 	release = release.DeepCopy()
+	oldManifests := render.SplitManifest(release.Status.Manifest)
 
 	var manifests []string
 	var postUpdate bool
@@ -115,7 +116,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 	// FIXME: when the number of failure larger than 3 which set int function handler, the resource will apply failed and the
 	// resource can not be consistent with the Spec.Config
 	// Apply resources.
-	if err := rc.client.Apply(release.Namespace, manifests, kube.ApplyOptions{
+	if err := rc.client.Apply(release.Namespace, manifests, oldManifests, kube.ApplyOptions{
 		OwnerReferences: referencesForRelease(release),
 		Checker:         rc.ignore,
 	}); err != nil {
