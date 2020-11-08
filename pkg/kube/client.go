@@ -46,7 +46,7 @@ type Client interface {
 	// Get gets the current object by resources.
 	Get(namespace string, resources []string, options GetOptions) ([]runtime.Object, error)
 	// Apply creates/updates all these resources.
-	Apply(namespace string, resources []string, options ApplyOptions) error
+	Apply(namespace string, newResources, oldResources []string, options ApplyOptions) error
 	// Create creates all these resources.
 	Create(namespace string, resources []string, options CreateOptions) error
 	// Update updates all resources.
@@ -127,17 +127,37 @@ func (c *client) Get(namespace string, resources []string, options GetOptions) (
 }
 
 // Apply creates/updates all these resources.
-func (c *client) Apply(namespace string, resources []string, options ApplyOptions) error {
-	objs, err := c.objectsByOrder(resources, InstallOrder)
+func (c *client) Apply(namespace string, newResources, oldResources []string, options ApplyOptions) error {
+	newObjects, err := c.objectsByOrder(newResources, InstallOrder)
 	if err != nil {
 		return err
 	}
-	for _, obj := range objs {
+	oldObjects, err := c.objectsByOrder(oldResources, InstallOrder)
+	if err != nil {
+		return err
+	}
+	for _, obj := range newObjects {
+
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		accessor, err := c.codec.AccessorForObject(obj)
 		if err != nil {
 			return err
 		}
+
+		if namespace != "default" && namespace != "kube-system" {
+			skipped := false
+			for _, each := range oldObjects {
+				if reflect.DeepEqual(obj, each) {
+					skipped = true
+					break
+				}
+			}
+			if skipped {
+				glog.Infoln(gvk.Kind, namespace, accessor.GetName(), "same manifest, skip update")
+				continue
+			}
+		}
+
 		if options.OwnerReferences != nil &&
 			// options.Checker is used to check if the object is belong to current owner.
 			// If not, add owner references to obj.
