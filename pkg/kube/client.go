@@ -46,7 +46,7 @@ type Client interface {
 	// Get gets the current object by resources.
 	Get(namespace string, resources []string, options GetOptions) ([]runtime.Object, error)
 	// Apply creates/updates all these resources.
-	Apply(namespace string, resources, oldResource []string, options ApplyOptions) error
+	Apply(namespace string, newResources, oldResources []string, options ApplyOptions) error
 	// Create creates all these resources.
 	Create(namespace string, resources []string, options CreateOptions) error
 	// Update updates all resources.
@@ -127,16 +127,16 @@ func (c *client) Get(namespace string, resources []string, options GetOptions) (
 }
 
 // Apply creates/updates all these resources.
-func (c *client) Apply(namespace string, newManifests, oldManifests []string, options ApplyOptions) error {
-	newObjectsFromManifests, err := c.objectsByOrder(newManifests, InstallOrder)
+func (c *client) Apply(namespace string, newResources, oldResources []string, options ApplyOptions) error {
+	newObjects, err := c.objectsByOrder(newResources, InstallOrder)
 	if err != nil {
 		return err
 	}
-	oldObjectsFromManifests, err := c.objectsByOrder(oldManifests, InstallOrder)
+	oldObjects, err := c.objectsByOrder(oldResources, InstallOrder)
 	if err != nil {
 		return err
 	}
-	for _, obj := range newObjectsFromManifests {
+	for _, obj := range newObjects {
 
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		accessor, err := c.codec.AccessorForObject(obj)
@@ -146,15 +146,8 @@ func (c *client) Apply(namespace string, newManifests, oldManifests []string, op
 
 		if namespace != "default" && namespace != "kube-system" {
 			skipped := false
-			for _, each := range oldObjectsFromManifests {
-				oldObjAccessor, err := c.codec.AccessorForObject(each)
-				if err != nil {
-					return err
-				}
-
-				if gvk == each.GetObjectKind().GroupVersionKind() &&
-					accessor.GetName() == oldObjAccessor.GetName() &&
-					reflect.DeepEqual(obj, each) {
+			for _, each := range oldObjects {
+				if reflect.DeepEqual(obj, each) {
 					skipped = true
 					break
 				}
