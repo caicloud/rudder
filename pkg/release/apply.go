@@ -18,6 +18,7 @@ import (
 func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *releaseapi.Release) error {
 	// Deep copy release. Avoid modifying original release.
 	release = release.DeepCopy()
+	oldManifests := render.SplitManifest(release.Status.Manifest)
 
 	var manifests []string
 	if release.Spec.RollbackTo != nil {
@@ -122,7 +123,7 @@ func (rc *releaseContext) applyRelease(backend storage.ReleaseStorage, release *
 
 	}
 	// Apply resources.
-	if err := rc.client.Apply(release.Namespace, manifests, kube.ApplyOptions{
+	if err := rc.client.Apply(release.Namespace, manifests, oldManifests, kube.ApplyOptions{
 		OwnerReferences: referencesForRelease(release),
 		Checker:         rc.ignore,
 	}); err != nil {

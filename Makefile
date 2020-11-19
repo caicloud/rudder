@@ -29,7 +29,7 @@
 ROOT := github.com/caicloud/rudder
 
 # Target binaries. You can build multiple binaries for a single project.
-TARGETS := controller release-cli
+TARGETS := controller
 
 # Container image prefix and suffix added to targets.
 # The final built images are:
