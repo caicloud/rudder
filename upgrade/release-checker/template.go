@@ -26,12 +26,13 @@ type Raw struct {
 	Data []byte
 }
 
-func (c *Raw) MarshalJSON() []byte {
-	return c.Data
+func (c *Raw) MarshalJSON() ([]byte, error) {
+	return c.Data, nil
 }
 
-func (c *Raw) UnmarshalJSON(data []byte) {
+func (c *Raw) UnmarshalJSON(data []byte) error {
 	c.Data = data
+	return nil
 }
 
 type Template struct {
