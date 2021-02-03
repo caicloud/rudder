@@ -87,7 +87,7 @@ func getSortedResources(resources []string) ([]string, error) {
 	kube.InstallOrder.Sort(objs)
 	for _, o := range objs {
 		gvk := o.GetObjectKind().GroupVersionKind()
-		if gvk.Kind == "Deployment" || gvk.Kind == "StatefulSet" || gvk.Kind == "DaemonSet" {
+		if gvk.Kind == "Deployment" || gvk.Kind == "StatefulSet" || gvk.Kind == "DaemonSet" || gvk.Kind == "CronJob" {
 			yamlData, err := yaml.Marshal(o)
 			if err != nil {
 				return nil, err
