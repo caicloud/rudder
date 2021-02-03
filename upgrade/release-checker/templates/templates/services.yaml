@@ -1,0 +1,53 @@
+{{/* Generates all services */}}
+
+{{- $g := . -}}
+
+{{ template "required" list .Values ".Values" "_config.controllers" "list"}}
+
+{{- $metadata := $g.Values._config._metadata -}}
+{{- range $index, $controller := .Values._config.controllers -}}
+{{- template "required" list $controller ".Values._config.controllers" "type" "string" -}}
+{{- $controllerName := include "onlyname" (list $g $index) | default (include "fullname" (list $g $index)) -}}
+
+{{- if .services -}}
+{{- range .services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name | quote }}
+  labels:
+    {{- include "appLabels" (list $g.Release.Name $metadata.appVersion) | indent 4 }}
+    {{- include "releaselabels" (list $g.Release.Name $g.Chart.Name) | indent 4 }}
+  annotations:
+    {{- include "annotations" . | indent 4 }}
+spec:
+  type: {{ .type | quote }}
+  sessionAffinity: {{ .sessionAffinity | default "None" | quote }}
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: {{ .affinityTimeout | default 10800 }}
+  selector:
+    {{/* we do not add appLabels in selector to let service select all versions */}}
+    {{- include "controllerlabels" $controllerName | indent 4 }}
+    {{- range $k, $v := .selector }}
+    {{ $k | quote }}: {{ $v | quote }}
+    {{- end }}
+  ports:
+  {{- $s := . -}}
+  {{- range .ports }}
+  - name: {{ (printf "%s-%.0f" .protocol .port) | lower | quote }}
+    {{- if eq .protocol "UDP" }}
+    protocol: "UDP"
+    {{- else }}
+    protocol: "TCP"
+    {{- end }}
+    port: {{ .port }}
+    targetPort: {{ .targetPort }}
+    {{ if eq $s.type "NodePort" -}} nodePort: {{ .nodePort }} {{- end -}}
+  {{- end }}
+---
+
+{{ end -}}
+{{- end -}}
+{{- end -}}

@@ -1,0 +1,23 @@
+{{/* Generates all configmaps */}}
+
+
+{{- $g := . -}}
+{{- $metadata := $g.Values._config._metadata -}}
+{{- range $index, $controller := .Values._config.controllers -}}
+{{- range $controller.configs }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "appLabels" (list $g.Release.Name $metadata.appVersion) | indent 4 }}
+    {{- include "releaselabels" (list $g.Release.Name $g.Chart.Name) | indent 4 }}
+data:
+  {{- range .data }}
+  {{ .key | quote }}: {{ .value | quote }}
+  {{- end }}
+---
+{{ end -}}
+{{- end -}}
+

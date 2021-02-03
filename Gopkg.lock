@@ -340,6 +340,20 @@
   version = "v1.3.1"
 
 [[projects]]
+  digest = "1:bbd3bb07622d854f47197191e94f9fb789efb3c3fba7baf9609c25a78625611b"
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/flags",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "UT"
+  revision = "ec71d6d790538ad88c95a192fd059e11afb45b6f"
+  version = "v0.5.4"
+
+[[projects]]
   digest = "1:a6181aca1fd5e27103f9a920876f29ac72854df7345a39f3b01e61c8c94cc8af"
   name = "github.com/google/gofuzz"
   packages = ["."]
@@ -994,6 +1008,7 @@
     "github.com/caicloud/clientset/listers/release/v1alpha1",
     "github.com/caicloud/clientset/pkg/apis/apiextensions/v1beta1",
     "github.com/caicloud/clientset/pkg/apis/release/v1alpha1",
+    "github.com/caicloud/clientset/pkg/apis/resource/v1beta1",
     "github.com/caicloud/clientset/util/syncqueue",
     "github.com/caicloud/go-common/interfaces",
     "github.com/caicloud/go-common/kubernetes/client",
@@ -1003,6 +1018,7 @@
     "github.com/evanphx/json-patch",
     "github.com/ghodss/yaml",
     "github.com/golang/glog",
+    "github.com/google/go-cmp/cmp",
     "github.com/imdario/mergo",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
