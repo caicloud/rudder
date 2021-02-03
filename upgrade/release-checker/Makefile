@@ -5,8 +5,6 @@ GITCOMMIT    ?= $(shell git rev-parse HEAD)
 GITTREESTATE ?= $(if $(shell git status --porcelain),dirty,clean)
 BUILDDATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 DOCKER_LABELS ?= git-describe="$(shell date -u +v%Y%m%d)-$(shell git describe --tags --always --dirty)"
-IMAGE_PREFIX ?= $(strip release-)
-IMAGE_SUFFIX ?= $(strip )
 VERSION      ?= $(shell git describe --tags --always --dirty)
 # Project output directory.
 OUTPUT_DIR := ./bin
@@ -21,8 +19,7 @@ export SHELLOPTS := errexit
 export GOFLAGS ?= -mod=vendor -p=8 -race -count=1
 
 container: build-linux
-	@image=$(IMAGE_PREFIX)release-checker$(IMAGE_SUFFIX);                                          \
-	docker build -t $(REGISTRY)/$${image}:$(VERSION)                                               \
+	@docker build -t $(REGISTRY)/release-checker:$(VERSION)                                        \
 	    --label $(DOCKER_LABELS)                                                                   \
 	    -f Dockerfile .;
 
