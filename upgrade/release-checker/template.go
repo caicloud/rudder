@@ -1,3 +1,4 @@
+//
 package main
 
 import (
@@ -26,10 +27,12 @@ type Raw struct {
 	Data []byte
 }
 
+// nolint
 func (c *Raw) MarshalJSON() ([]byte, error) {
 	return c.Data, nil
 }
 
+// nolint
 func (c *Raw) UnmarshalJSON(data []byte) error {
 	c.Data = data
 	return nil
@@ -134,9 +137,6 @@ func ChartPath() string {
 func LoadBasicChart(typ, templateVersion string) (*chart.Chart, error) {
 	if typ != "" && typ != DefaultTemplateType {
 		return nil, fmt.Errorf("nil typ %s %s", typ, templateVersion)
-	}
-	if templateVersion == "" {
-		templateVersion = DefaultTemplateVersion
 	}
 	result, err := chartutil.LoadDir(ChartPath())
 	if err != nil {
